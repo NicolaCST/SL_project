@@ -1,6 +1,11 @@
 cur_dir = getwd()
+data = "SL_dataset"
+bike = "BostonBike"
+file = "bluebikes_tripdata_2019.csv"
 
-tripdata_2019 <- read.csv("C:/Users/andre/OneDrive/Desktop/Uni/Statistical Learning/project/bluebikes_tripdata_2019.csv")
+PATH = paste(cur_dir, data, bike, file, sep="/")
+
+tripdata_2019 <- read.csv(PATH)
 
 tripdata_2019_r <- subset(tripdata_2019, select = -c(usertype, gender, start.station.name, end.station.name))
 
