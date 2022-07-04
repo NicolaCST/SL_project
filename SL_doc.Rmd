@@ -118,6 +118,18 @@ dens = density(tripdata_2019_r$age)
 plot(dens)
 ```
 
+
+
+```{r}
+boxplot(tripdata_2019_r$age)
+```
+
+
+
+
+
+
+
 Repeat the same exact procedure for the dataset of the 2020
 
 ```{r}
