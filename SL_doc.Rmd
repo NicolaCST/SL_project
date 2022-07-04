@@ -26,6 +26,7 @@ load_dataset = function(data_folder, file){
 ```
 
 Load dataset and remove col that are not useful for our purpose
+
 ```{r}
 tripdata_2019 = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2019.csv"))
 tripdata_2019_r = subset(tripdata_2019, select = -c(usertype, gender, start.station.name, end.station.name))
@@ -48,10 +49,10 @@ tripdata_2019_r = subset(tripdata_2019_r, select = -c(syear, stopyear))
 ```
 
 In order to avoid future possible issue with our analysis, we removed all the trips that started in a month and finished in the next one (ex. start as 31/07 23:59 and end 01/08 00:30). This specific kind of trip amount to 0.035% of the total.
+
 ```{r}
 between_month = nrow(tripdata_2019_r[tripdata_2019_r$startmonth != tripdata_2019_r$stopmonth,])
-print("% of trips between months in 2019", ratio = round((as.integer(between_month) / as.integer(nrow(tripdata_2019_r))) * 100, 3))
-
+ratio = round((as.integer(between_month) / as.integer(nrow(tripdata_2019_r))) * 100, 3)
 tripdata_2019_r = subset(tripdata_2019_r, select = -c(stopmonth, startmonth))
 ```
 
@@ -66,65 +67,59 @@ tripdata_2019_r$stoptime = as.numeric(tripdata_2019_r$stoptime)
 tripdata_2019_r$stoptime = round(tripdata_2019_r$stoptime,0)
 ```
 
-
-
 ```{r}
-months_19 = table(tripdata_2019_r$month)
+par(mfrow=c(1,2))
 
-freq_month_19 = barplot(data, 
+freq_month_19 = barplot(months_19, 
      main = "Freq during months",
      xlab = "Months",
      ylab = "Freq",
      col = "light Blue")
-
-
 text(x = freq_month_19, y = months_19 + 0.5, labels = months_19, cex=0.8)
-```
 
-```{r}
+
 mean_dur_19 = c()
 
 for (val in 1:12){
   mean_dur_19[val] =  round(mean(tripdata_2019_r$tripduration[tripdata_2019_r$month == val])/60,2)
 }
 
-
 min_per_month_19 = barplot(mean_dur_19, 
      main = "Avg (min) per month",
-     xlab = "Month",
+     xlab = "Months",
      ylab = "Mins",
      col = "light green",
      names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
+text(x = min_per_month_19, y = mean_dur_19 + 0.5, labels = mean_dur_19, cex=0.7)
+```
 
+```{r}
+tripdata_2019_r$age = tripdata_2019_r$year - tripdata_2019_r$birth.year
+```
 
-text(x = min_per_month_19, y = mean_dur_19 + 0.5, labels = mean_dur_19, cex=0.8)
-
-
+```{r}
+cat("min age:", min(tripdata_2019_r$age))
+cat("\nmax age:", max(tripdata_2019_r$age))
+cat("\nusers >80y:", nrow(tripdata_2019_r[tripdata_2019_r$age > 80,]))
+```
+```{r}
+nrow(tripdata_2019_r[tripdata_2019_r$age > 60 & tripdata_2019_r$age < 80,])
 ```
 
 
 
+```{r}
+hist(tripdata_2019_r$age, 
+     breaks = 20,
+     labels = TRUE)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+dens = density(tripdata_2019_r$age)
+plot(dens)
+```
 
 Repeat the same exact procedure for the dataset of the 2020
+
 ```{r}
 
 tripdata_2020 = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2020.csv"))
@@ -160,8 +155,6 @@ rm(tripdata_2020)
 
 ```
 
-
 ```{r}
 tripdata_2020_r$birth.year[is.na(tripdata_2020_r$birth.year)] = ("not_dec")
 ```
-
