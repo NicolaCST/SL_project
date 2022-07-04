@@ -31,6 +31,7 @@ Load dataset and remove col that are not useful for our purpose
 tripdata_2019 = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2019.csv"))
 tripdata_2019_r = subset(tripdata_2019, select = -c(usertype, gender, start.station.name, end.station.name))
 colnames(tripdata_2019_r)
+rm(tripdata_2019)
 
 # Control the number of trip longer than 1H and shorter than 1m
 nrow(tripdata_2019_r[tripdata_2019_r$tripduration>3600,])
