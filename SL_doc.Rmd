@@ -103,10 +103,6 @@ cat("min age:", min(tripdata_2019_r$age))
 cat("\nmax age:", max(tripdata_2019_r$age))
 cat("\nusers >80y:", nrow(tripdata_2019_r[tripdata_2019_r$age > 80,]))
 ```
-```{r}
-nrow(tripdata_2019_r[tripdata_2019_r$age > 60 & tripdata_2019_r$age < 80,])
-```
-
 
 
 ```{r}
@@ -124,9 +120,86 @@ plot(dens)
 ```{r}
 boxplot(tripdata_2019_r$age)
 ```
+```{r}
+temp = tripdata_2019_r[tripdata_2019_r$age < 80,] 
+```
 
 
 
+```{r}
+
+X = subset(temp, select = c(tripduration, starttime, month, start.station.id, end.station.id))
+y = temp$age
+
+```
+
+
+```{r}
+model = lm(y~tripduration + starttime + month + start.station.id + end.station.id, data=temp)
+summary(model)
+```
+```{r}
+summary(model)$coefficient
+```
+```{r}
+model = lm(y~tripduration + starttime + month, data=temp)
+summary(model)
+```
+```{r}
+summary(model)$coefficient
+```
+```{r}
+confint(model)
+```
+
+
+```{r}
+sigma(model)/mean(temp$age)
+```
+
+```{r}
+plot(fitted(model), residuals(model), col="gray40", xlab="fitted values", ylab="residuals")
+lines(loess.smooth(fitted(model), residuals(model)), col="blue", lwd=2)
+```
+```{r}
+library(GGally)
+ggpairs(X)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-----2020----------------------------------------------------------------------------------------------------------
 
 
 
