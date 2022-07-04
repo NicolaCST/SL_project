@@ -11,25 +11,25 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Statistical Learning mod B project
 
-#Libraries and Functions 
-load_dataset: loading dataset. Dataset need to be in the same folder of the project.
-```
+#Libraries and Functions load_dataset
+
+```{r}
 library(lubridate)
 library(rmarkdown)
 library(knitr)
+library(ggplot2)
 
+#loading dataset. Dataset need to be in the same folder of the project.
 load_dataset = function(data_folder, file){
   PATH = paste(getwd(), data_folder, file, sep="/")
 }
 ```
 
-# 
 Load dataset and remove col that are not useful for our purpose
-```
+```{r}
 tripdata_2019 = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2019.csv"))
 tripdata_2019_r = subset(tripdata_2019, select = -c(usertype, gender, start.station.name, end.station.name))
 colnames(tripdata_2019_r)
-```
 
 # Control the number of trip longer than 1H and shorter than 1m
 nrow(tripdata_2019_r[tripdata_2019_r$tripduration>3600,])
@@ -38,6 +38,7 @@ nrow(tripdata_2019_r[tripdata_2019_r$tripduration<60,])
 # Split timestamp in date - time Then split date in y/m/d
 tripdata_2019_r = tidyr::separate(tripdata_2019_r, starttime, c("startdate", "starttime"), sep = " ")
 tripdata_2019_r = tidyr::separate(tripdata_2019_r, startdate, c("syear", "startmonth", "startday"), sep = "-")
+
 tripdata_2019_r = tidyr::separate(tripdata_2019_r, stoptime, c("stopdate", "stoptime"), sep = " ")
 tripdata_2019_r = tidyr::separate(tripdata_2019_r, stopdate, c("stopyear", "stopmonth", "stopday"), sep = "-")
 
@@ -46,17 +47,121 @@ tripdata_2019_r = subset(tripdata_2019_r, select = -c(syear, stopyear))
 
 ```
 
+In order to avoid future possible issue with our analysis, we removed all the trips that started in a month and finished in the next one (ex. start as 31/07 23:59 and end 01/08 00:30). This specific kind of trip amount to 0.035% of the total.
+```{r}
+between_month = nrow(tripdata_2019_r[tripdata_2019_r$startmonth != tripdata_2019_r$stopmonth,])
+print("% of trips between months in 2019", ratio = round((as.integer(between_month) / as.integer(nrow(tripdata_2019_r))) * 100, 3))
 
-
-
-
-
-
-
-
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+tripdata_2019_r = subset(tripdata_2019_r, select = -c(stopmonth, startmonth))
 ```
+
+```{r}
+# Convert time to sec [starting from midnight]
+tripdata_2019_r$starttime = hms(tripdata_2019_r$starttime)
+tripdata_2019_r$starttime = as.numeric(tripdata_2019_r$starttime)
+tripdata_2019_r$starttime = round(tripdata_2019_r$starttime,0)
+
+tripdata_2019_r$stoptime = hms(tripdata_2019_r$stoptime)
+tripdata_2019_r$stoptime = as.numeric(tripdata_2019_r$stoptime)
+tripdata_2019_r$stoptime = round(tripdata_2019_r$stoptime,0)
+```
+
+
+
+```{r}
+months_19 = table(tripdata_2019_r$month)
+
+freq_month_19 = barplot(data, 
+     main = "Freq during months",
+     xlab = "Months",
+     ylab = "Freq",
+     col = "light Blue")
+
+
+text(x = freq_month_19, y = months_19 + 0.5, labels = months_19, cex=0.8)
+```
+
+```{r}
+mean_dur_19 = c()
+
+for (val in 1:12){
+  mean_dur_19[val] =  round(mean(tripdata_2019_r$tripduration[tripdata_2019_r$month == val])/60,2)
+}
+
+
+min_per_month_19 = barplot(mean_dur_19, 
+     main = "Avg (min) per month",
+     xlab = "Month",
+     ylab = "Mins",
+     col = "light green",
+     names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
+
+
+text(x = min_per_month_19, y = mean_dur_19 + 0.5, labels = mean_dur_19, cex=0.8)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Repeat the same exact procedure for the dataset of the 2020
+```{r}
+
+tripdata_2020 = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2020.csv"))
+tripdata_2020_r = subset(tripdata_2020, select = -c(usertype, gender, start.station.name, end.station.name))
+
+tripdata_2020_r = tidyr::separate(tripdata_2020_r, starttime, c("startdate", "starttime"), sep = " ")
+tripdata_2020_r = tidyr::separate(tripdata_2020_r, startdate, c("syear", "startmonth", "startday"), sep = "-")
+tripdata_2020_r = tidyr::separate(tripdata_2020_r, stoptime, c("stopdate", "stoptime"), sep = " ")
+tripdata_2020_r = tidyr::separate(tripdata_2020_r, stopdate, c("stopyear", "stopmonth", "stopday"), sep = "-")
+
+tripdata_2020_r = subset(tripdata_2020_r, select = -c(syear, stopyear))
+
+tripdata_2020_r$starttime = hms(tripdata_2020_r$starttime)
+tripdata_2020_r$starttime = as.numeric(tripdata_2020_r$starttime)
+tripdata_2020_r$starttime = round(tripdata_2020_r$starttime,0)
+
+tripdata_2020_r$stoptime = hms(tripdata_2020_r$stoptime)
+tripdata_2020_r$stoptime = as.numeric(tripdata_2020_r$stoptime)
+tripdata_2020_r$stoptime = round(tripdata_2020_r$stoptime,0)
+
+between_month = nrow(tripdata_2020_r[tripdata_2020_r$startmonth != tripdata_2020_r$stopmonth,])
+print("% of trips between months in 2020", ratio = round((as.integer(between_month) / as.integer(nrow(tripdata_2020_r))) * 100, 3)) #0.039%
+
+tripdata_2020_r = subset(tripdata_2020_r, select = -c(stopmonth, startmonth))
+
+colnames(tripdata_2019)
+colnames(tripdata_2020) #Remark: 2020 dataset has PostalCode, while 2019 no
+
+#Remove old dataset to free memory
+rm(tripdata_2019)
+rm(tripdata_2020)
+
+
+```
+
+
+```{r}
+tripdata_2020_r$birth.year[is.na(tripdata_2020_r$birth.year)] = ("not_dec")
+```
+
