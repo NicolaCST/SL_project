@@ -78,7 +78,14 @@ tripdata_2019_r = tripdata_2019_r[tripdata_2019_r$start.station.latitude > 1 & t
 
 
 ```{r}
-write.csv(tripdata_2019_r, "C:/Users/Utente/Desktop/SL_project/tripdata_2019_r.csv")
+#Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
+tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Subscriber"] = 1
+tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Customer"] = 0
+```
+
+
+```{r}
+write.csv(tripdata_2019_r, "C:/Users/Utente/Desktop/SL_project/tripdata_2019_r.csv", row.names = FALSE)
 ```
 
 

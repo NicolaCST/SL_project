@@ -106,25 +106,16 @@ A problem with the R2, is that, it will always increase when more variables are 
 The adjustment in the “Adjusted R Square” value in the summary output is a correction for the number of x variables included in the prediction model.
 
 In our case, the adjusted R2 = 0.008, meaning that “0.08% of the variance in the measure can be predicted by starttime and month"
-```{r}
-confint(model)
-```
 
 The RSE estimate gives a measure of error of prediction. The lower the RSE, the more accurate the model.
 The error rate can be estimated by dividing the RSE by the mean outcome variable:
-```{r}
-#not correct
-sigma(model)/mean(sub_data$age)
-```
 
 
-Test with all variables and not with subset
+Test with best subset  
 ```{r}
 sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
 #our Y
 age_groups = cut(sub_data$age, breaks=c(16, 25, 35, 45, 55, 65, 75, 80), right = FALSE, labels = FALSE)
-
-sub_data = subset(sub_data, select = -c(X))
 
 nrow(sub_data)
 length(age_groups)
@@ -156,20 +147,12 @@ lines(loess.smooth(fitted(model), residuals(model)), col="blue", lwd=2)
 ```
 
 ```{r}
-
 ggpairs(X)
 ```
 
 
 ```{r}
-adv = read.csv(load_dataset("SL_dataset", "Advertising.csv"))
-```
-
-
-
-```{r}
-#sub_data = subset(sub_data, select = -c(year, X, birth.year))
-sub_data = subset(sub_data, select = -c(X.1))
+sub_data = subset(sub_data, select = -c(year, birth.year))
 round(var(sub_data),2)
 ```
 
@@ -217,15 +200,33 @@ plot(sub_data$start.station.latitude, sub_data$end.station.latitude)
 
 
 
-
-
 ```{r}
 plot(round(sub_data$starttime/3600,2), round(sub_data$stoptime/3600,2))
 ```
+Remark: Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
 
 
+EDA on gender and customer type
+```{r}
+
+tab = table(sub_data$gender, sub_data$usertype)
+hist = barplot(tab, 
+        beside = TRUE, 
+        legend = FALSE,
+        main = "Gender and UserType",
+        xlab = "UserType",
+        ylab = "Freq",
+        ylim=c(0, max(tab) + 100000),
+        names.arg = c("Customer", "Subscriber"),
+        col = heat.colors(3))
+
+legend("topleft", legend = c("Unknown", "Male", "Female"),
+       fill = heat.colors(3))
+
+text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
 
+```
 
 
 
