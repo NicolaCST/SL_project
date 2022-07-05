@@ -17,7 +17,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(lubridate)
 library(rmarkdown)
 library(knitr)
-library(ggplot2)
 
 #loading dataset. Dataset need to be in the same folder of the project.
 load_dataset = function(data_folder, file){
@@ -29,7 +28,7 @@ Load dataset and remove col that are not useful for our purpose
 
 ```{r}
 tripdata_2019 = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2019.csv"))
-tripdata_2019_r = subset(tripdata_2019, select = -c(usertype, gender, start.station.name, end.station.name))
+tripdata_2019_r = subset(tripdata_2019, select = -c(start.station.name, end.station.name))
 colnames(tripdata_2019_r)
 rm(tripdata_2019)
 
@@ -68,130 +67,19 @@ tripdata_2019_r$stoptime = as.numeric(tripdata_2019_r$stoptime)
 tripdata_2019_r$stoptime = round(tripdata_2019_r$stoptime,0)
 ```
 
-```{r}
-par(mfrow=c(1,2))
-
-freq_month_19 = barplot(months_19, 
-     main = "Freq during months",
-     xlab = "Months",
-     ylab = "Freq",
-     col = "light Blue")
-text(x = freq_month_19, y = months_19 + 0.5, labels = months_19, cex=0.8)
-
-
-mean_dur_19 = c()
-
-for (val in 1:12){
-  mean_dur_19[val] =  round(mean(tripdata_2019_r$tripduration[tripdata_2019_r$month == val])/60,2)
-}
-
-min_per_month_19 = barplot(mean_dur_19, 
-     main = "Avg (min) per month",
-     xlab = "Months",
-     ylab = "Mins",
-     col = "light green",
-     names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
-text(x = min_per_month_19, y = mean_dur_19 + 0.5, labels = mean_dur_19, cex=0.7)
-```
 
 ```{r}
 tripdata_2019_r$age = tripdata_2019_r$year - tripdata_2019_r$birth.year
 ```
 
 ```{r}
-cat("min age:", min(tripdata_2019_r$age))
-cat("\nmax age:", max(tripdata_2019_r$age))
-cat("\nusers >80y:", nrow(tripdata_2019_r[tripdata_2019_r$age > 80,]))
+tripdata_2019_r = tripdata_2019_r[tripdata_2019_r$start.station.latitude > 1 & tripdata_2019_r$end.station.latitude >1,]
 ```
 
 
 ```{r}
-hist(tripdata_2019_r$age, 
-     breaks = 20,
-     labels = TRUE)
-
-
-dens = density(tripdata_2019_r$age)
-plot(dens)
+write.csv(tripdata_2019_r, "C:/Users/Utente/Desktop/SL_project/tripdata_2019_r.csv")
 ```
-
-
-
-```{r}
-boxplot(tripdata_2019_r$age)
-```
-```{r}
-temp = tripdata_2019_r[tripdata_2019_r$age < 80,] 
-```
-
-
-
-```{r}
-
-X = subset(temp, select = c(tripduration, starttime, month, start.station.id, end.station.id))
-y = temp$age
-
-```
-
-
-```{r}
-model = lm(y~tripduration + starttime + month + start.station.id + end.station.id, data=temp)
-summary(model)
-```
-```{r}
-summary(model)$coefficient
-```
-```{r}
-model = lm(y~tripduration + starttime + month, data=temp)
-summary(model)
-```
-```{r}
-summary(model)$coefficient
-```
-```{r}
-confint(model)
-```
-
-
-```{r}
-sigma(model)/mean(temp$age)
-```
-
-```{r}
-plot(fitted(model), residuals(model), col="gray40", xlab="fitted values", ylab="residuals")
-lines(loess.smooth(fitted(model), residuals(model)), col="blue", lwd=2)
-```
-```{r}
-library(GGally)
-ggpairs(X)
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
