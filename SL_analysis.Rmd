@@ -250,7 +250,7 @@ plot(density(log(customer_dur$tripduration)))
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
-rm(tripdata_2019_r)
+#rm(tripdata_2019_r)
 
 data = subset(sub_data, select = -c(year, 
                                     birth.year, 
@@ -309,7 +309,39 @@ accuracy(tab)
 ```
 
 
+```{r}
 
+unknown = tripdata_2019_r[tripdata_2019_r$age > 80,]
+
+un_data = subset(unknown, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    end.station.id,  
+                                    start.station.id, 
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.latitude, 
+                                    end.station.longitude,
+                                    age,
+                                    gender))
+
+
+
+un_data$tripduration = round(un_data$tripduration/60,2)
+un_data$starttime = round(un_data$starttime/60,2)
+un_data$stoptime = round(un_data$stoptime/60,2)
+
+un_data[c("tripduration", "starttime", "stoptime")] = lapply(un_data[c("tripduration", "starttime", "stoptime")], nor)
+
+
+##run knn function
+pr_un_data = knn(data_train, un_data, cl=labels_train, k=10)
+```
+
+```{r}
+pr_un_data
+```
 
 
 
