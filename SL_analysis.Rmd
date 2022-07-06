@@ -217,7 +217,7 @@ hist = barplot(tab,
         xlab = "UserType",
         ylab = "Freq",
         ylim=c(0, max(tab) + 100000),
-        names.arg = c("Customer", "Subscriber"),
+        names.arg = c("Customer: 0", "Subscriber: 1"),
         col = heat.colors(3))
 
 legend("topleft", legend = c("Unknown", "Male", "Female"),
@@ -230,10 +230,83 @@ text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
 
 
+EDA userType / tripduration
+```{r}
+EDA_UT = subset(sub_data, select = c(tripduration, usertype))
+
+customer_dur = EDA_UT[EDA_UT$usertype == 0,]
+customer_dur = subset(customer_dur, select = -c(usertype))
+
+subscriber_dur = EDA_UT[EDA_UT$usertype == 1,]
+subscriber_dur = subset(subscriber_dur, select = -c(usertype))
+```
+
+
+```{r}
+plot(density(log(customer_dur$tripduration)))
+```
+
+
+```{r}
+tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
+sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
+rm(tripdata_2019_r)
+
+data = subset(sub_data, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    end.station.id,  
+                                    start.station.id, 
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.latitude, 
+                                    end.station.longitude))
 
 
 
+data$tripduration = round(data$tripduration/60,2)
+data$starttime = round(data$starttime/60,2)
+data$stoptime = round(data$stoptime/60,2)
 
+
+##the normalization function is created
+nor = function(x) { (x -min(x))/(max(x)-min(x))   }
+
+
+data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
+
+
+##Generate a random number that is 90% of the total number of rows in dataset.
+ran = sample(1:nrow(data), 0.2 * nrow(data)) 
+##extract training set
+data_train = data[ran,] 
+
+ran_test = sample(1:nrow(data_train), 0.05 * nrow(data_train)) 
+##extract testing set
+data_test = data_train[ran_test,] 
+
+#our Y
+labels_train = cut(data_train$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
+labels_test = cut(data_test$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
+
+
+data_train = subset(data_train, select = -c(age, gender))
+data_test = subset(data_test, select = -c(age, gender))
+
+
+library(class)
+##run knn function
+pr = knn(data_train, data_test, cl=labels_train, k=10)
+
+##create confusion matrix
+tab = table(pr, labels_test)
+
+##this function divides the correct predictions by total number of predictions that tell us how accurate teh model is.
+accuracy = function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+accuracy(tab)
+
+```
 
 
 
