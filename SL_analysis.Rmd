@@ -248,6 +248,15 @@ plot(density(log(customer_dur$tripduration)))
 
 
 ```{r}
+par(mfrow=c(1,2))
+hist(labels_train, probability = TRUE)
+plot(density(tripdata_2019_r$age[tripdata_2019_r$age <= 80]), main = "Distribution of ages")
+```
+
+
+
+
+```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
 #rm(tripdata_2019_r)
@@ -304,9 +313,17 @@ tab = table(pr, labels_test)
 
 ##this function divides the correct predictions by total number of predictions that tell us how accurate teh model is.
 accuracy = function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
-accuracy(tab)
+precision = function(x){(diag(x)/((rowSums(x)))) * 100}
+recall = function(x){(diag(x)/((colSums(x)))) * 100}
+
+
+cat("Accuracy: ", round(accuracy(tab),2))
+cat("\nPrecision: ", round(precision(tab),2))
+cat("\nRecall: ", round(recall(tab),2))
 
 ```
+
+
 
 
 ```{r}
@@ -340,24 +357,154 @@ pr_un_data = knn(data_train, un_data, cl=labels_train, k=10)
 ```
 
 ```{r}
-pr_un_data
+old_method = pr_un_data
+table(old_method)
+```
+```{r}
+new_method = pr_un_data
+table(new_method)
 ```
 
 
 
 
+```{r}
+tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
+sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
+rm(tripdata_2019_r)
+
+data = subset(sub_data, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    #end.station.id,  
+                                    #start.station.id, 
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.latitude, 
+                                    end.station.longitude))
+
+
+
+data$tripduration = round(data$tripduration/60,2)
+data$starttime = round(data$starttime/60,2)
+data$stoptime = round(data$stoptime/60,2)
+
+
+##the normalization function is created
+nor = function(x) { (x -min(x))/(max(x)-min(x))   }
+
+
+data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
+
+
+a = subset(data, age >= 16 & age <30)
+b = subset(data, age >= 30 & age <40)
+c = subset(data, age >= 40 & age <60)
+d = subset(data, age >= 60 & age <=80)
+
+
+
+##Generate a random number that is 90% of the total number of rows in dataset.
+ran = sample(1:nrow(d), 0.9 * nrow(d)) 
+
+##extract training set
+a_s = a[ran,]
+b_s = b[ran,]
+c_s = c[ran,]
+d_s = d[ran,]
+
+
+ran_test = sample(1:nrow(d), 0.1 * nrow(d)) 
+##extract testing set
+a_t = a[ran_test,]
+b_t = b[ran_test,]
+c_t = c[ran_test,]
+d_t = d[ran_test,]
+
+
+data_train = rbind(a_s, b_s, c_s, d_s)
+data_test = rbind(a_t, b_t, c_t, d_t)
+
+rm(a,b,c,d, a_s, b_s, c_s, d_s, a_t, b_t, c_t, d_t)
+
+#our Y
+labels_train = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+labels_test = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+
+data_train = subset(data_train, select = -c(age, gender))
+data_test = subset(data_test, select = -c(age, gender))
+
+
+library(class)
+##run knn function
+pr = knn(data_train, data_test, cl=labels_train, k=10)
+
+##create confusion matrix
+tab = table(pr, labels_test)
+
+##this function divides the correct predictions by total number of predictions that tell us how accurate teh model is.
+accuracy = function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+precision = function(x){(diag(x)/((rowSums(x)))) * 100}
+recall = function(x){(diag(x)/((colSums(x)))) * 100}
+
+
+cat("Accuracy: ", round(accuracy(tab),2))
+cat("\nPrecision: ", round(precision(tab),2))
+cat("\nRecall: ", round(recall(tab),2))
+
+```
+
+
+
+```{r}
+# Fit the model
+model = nnet::multinom(labels_train ~., data = data_train)
+```
+
+
+```{r}
+# Make predictions
+predicted.classes = model %>% predict(data_test)
+# Model accuracy
+mean(predicted.classes == labels_test)
+```
+
+
+```{r}
+classifier_RF = randomForest(x = data_train,
+                             y = as.factor(labels_train),
+                             ntree = 100)
+```
+
+```{r}
+# Predicting the Test set results
+y_pred = predict(classifier_RF, newdata = data_test)
+  
+# Confusion Matrix
+confusion_mtx = table(y_pred, labels_test)
+confusion_mtx
+```
+
+```{r}
+# Plotting model
+plot(classifier_RF)
+  
+# Importance plot
+importance(classifier_RF)
+  
+# Variable importance plot
+varImpPlot(classifier_RF)
+```
 
 
 
 
-
-
-
-
-
-
-
-
+```{r}
+cat("Accuracy: ", round(accuracy(confusion_mtx),2))
+cat("\nPrecision: ", round(precision(confusion_mtx),2))
+cat("\nRecall: ", round(recall(confusion_mtx),2))
+```
 
 
 
