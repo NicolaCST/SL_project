@@ -22,12 +22,13 @@ tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 ```{r}
 par(mfrow=c(1,2))
 
-freq_month_19 = barplot(months_19, 
+month_19 = table(sub_data$month)
+
+freq_month_19 = barplot(month_19, 
      main = "Freq during months",
      xlab = "Months",
      ylab = "Freq",
      col = "light Blue")
-text(x = freq_month_19, y = months_19 + 0.5, labels = months_19, cex=0.8)
 
 
 mean_dur_19 = c()
@@ -40,10 +41,9 @@ min_per_month_19 = barplot(mean_dur_19,
      main = "Avg (min) per month",
      xlab = "Months",
      ylab = "Mins",
+     ylim=c(0, max(mean_dur_19) + 5),
      col = "light green",
      names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
-
-text(x = min_per_month_19, y = mean_dur_19 + 0.5, labels = mean_dur_19, cex=0.7)
 ```
 
 ```{r}
