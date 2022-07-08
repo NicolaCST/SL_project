@@ -516,30 +516,27 @@ data$age = cut(data$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, la
 
 
 ```{r}
+
+our_palette = c(rgb(1, 0, 0), 
+              rgb(0, 1, 0), 
+              rgb(0, 0, 1), 
+              rgb(1, 0.5, 0))
+
 c1 = density(data[data$age==1,]$month, adjust = 3.5)
 c2 = density(data[data$age==2,]$month, adjust = 3.5)
 c3 = density(data[data$age==3,]$month, adjust = 3.5)
 c4 = density(data[data$age==4,]$month, adjust = 3.5)
 
-plot(c1, xlim = c(1,12), main = "age density over months")
-lines(c2)
-lines(c3)
-lines(c4)
+plot(c1, xlim = c(1,12), main = "Age density over months", col = our_palette[1], lwd = 2)
+lines(c2, col = our_palette[2], lwd = 2)
+lines(c3, col = our_palette[3], lwd = 2)
+lines(c4, col = our_palette[4], lwd = 2)
 
-our_palette = c(rgb(1, 0, 0, alpha = 0.25), 
-              rgb(0, 1, 0, alpha = 0.25), 
-              rgb(0, 0, 1, alpha = 0.25), 
-              rgb(1, 0.5, 0, alpha = 0.25))
 
 legend("topleft", 
        legend = c("16-29", "30-39", "40-59", "60-80"),
        fill = our_palette)
 
-# Fill the areas
-polygon(c1, col = our_palette[1])
-polygon(c2, col = our_palette[2])
-polygon(c3, col = our_palette[3])
-polygon(c4, col = our_palette[4])
 
 ```
 
