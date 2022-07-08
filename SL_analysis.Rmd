@@ -6,7 +6,6 @@ library(ggplot2)
 library(GGally)
 ```
 
-
 ```{r}
 #loading dataset. Dataset need to be in the same folder of the project.
 load_dataset = function(data_folder, file){
@@ -17,7 +16,6 @@ load_dataset = function(data_folder, file){
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 ```
-
 
 ```{r}
 par(mfrow=c(1,2))
@@ -53,17 +51,21 @@ cat("\nusers >80y:", nrow(tripdata_2019_r[tripdata_2019_r$age > 80,]))
 ```
 
 ```{r}
+par(mfrow=c(1,2))
+
 hist(tripdata_2019_r$age, 
      breaks = 20,
-     labels = TRUE)
+     main = "Age Histogram 2019")
 
 
 dens = density(tripdata_2019_r$age)
 plot(dens)
 
-boxplot(tripdata_2019_r$age)
 ```
 
+```{r}
+boxplot(tripdata_2019_r$age)
+```
 
 ```{r}
 sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
@@ -76,22 +78,22 @@ X = subset(sub_data, select = c(tripduration, starttime, startday, month, start.
 age_groups = cut(sub_data$age, breaks=c(16, 25, 35, 45, 55, 65, 75, 80), right = FALSE, labels = FALSE)
 ```
 
-
 ```{r}
 nrow(X)
 length(age_groups)
 ```
 
-
 ```{r}
 model = lm(age_groups~., data=X)
 summary(model)
 ```
-it can be seen that p-value of the F-statistic is < 2.2e-16, which is highly significant. This means that, at least, one of the predictor variables is significantly related to the outcome variable.
+
+it can be seen that p-value of the F-statistic is \< 2.2e-16, which is highly significant. This means that, at least, one of the predictor variables is significantly related to the outcome variable.
 
 ```{r}
 summary(model)$coefficient
 ```
+
 the t-statistic evaluates whether or not there is significant association between the predictor and the outcome variable, that is whether the beta coefficient of the predictor is significantly different from zero.
 
 It seems like that the "startday" and "start.station.id" are not significant, thus we can remove them.
@@ -100,19 +102,19 @@ It seems like that the "startday" and "start.station.id" are not significant, th
 model = lm(age_groups~tripduration + starttime + month + end.station.id, data=X)
 summary(model)
 ```
+
 R2 represents the proportion of variance, in the outcome variable y, that may be predicted by knowing the value of the x variables. An R2 value close to 1 indicates that the model explains a large portion of the variance in the outcome variable.
 
 A problem with the R2, is that, it will always increase when more variables are added to the model, even if those variables are only weakly associated with the response. A solution is to adjust the R2 by taking into account the number of predictor variables.
 
-The adjustment in the “Adjusted R Square” value in the summary output is a correction for the number of x variables included in the prediction model.
+The adjustment in the "Adjusted R Square" value in the summary output is a correction for the number of x variables included in the prediction model.
 
-In our case, the adjusted R2 = 0.008, meaning that “0.08% of the variance in the measure can be predicted by starttime and month"
+In our case, the adjusted R2 = 0.008, meaning that "0.08% of the variance in the measure can be predicted by starttime and month"
 
-The RSE estimate gives a measure of error of prediction. The lower the RSE, the more accurate the model.
-The error rate can be estimated by dividing the RSE by the mean outcome variable:
+The RSE estimate gives a measure of error of prediction. The lower the RSE, the more accurate the model. The error rate can be estimated by dividing the RSE by the mean outcome variable:
 
+Test with best subset
 
-Test with best subset  
 ```{r}
 sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
 #our Y
@@ -121,6 +123,7 @@ age_groups = cut(sub_data$age, breaks=c(16, 25, 35, 45, 55, 65, 75, 80), right =
 nrow(sub_data)
 length(age_groups)
 ```
+
 ```{r}
 #questo sembra essere il subset migliore
 model = lm(age_groups~. -year -birth.year -age -startday -end.station.id -stopday -start.station.id -bikeid -tripduration, data=sub_data)
@@ -130,8 +133,8 @@ summary(model)
 ```{r}
 confint(model)
 ```
-I mean, siamo passati dallo spiegare lo 0.08% della varianza al 2.4%, ma non so se sia la strada giusta
 
+I mean, siamo passati dallo spiegare lo 0.08% della varianza al 2.4%, ma non so se sia la strada giusta
 
 ```{r}
 library(broom)
@@ -151,12 +154,10 @@ lines(loess.smooth(fitted(model), residuals(model)), col="blue", lwd=2)
 ggpairs(X)
 ```
 
-
 ```{r}
 sub_data = subset(sub_data, select = -c(year, birth.year))
 round(var(sub_data),2)
 ```
-
 
 ```{r}
 # ++++++++++++++++++++++++++++
@@ -174,7 +175,6 @@ flattenCorrMatrix <- function(cormat, pmat) {
     )
 }
 ```
-
 
 ```{r}
 library(Hmisc)
@@ -199,15 +199,14 @@ plot(sub_data$start.station.latitude, sub_data$end.station.latitude)
 
 ```
 
-
-
 ```{r}
 plot(round(sub_data$starttime/3600,2), round(sub_data$stoptime/3600,2))
 ```
+
 Remark: Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
 
-
 EDA on gender and customer type
+
 ```{r}
 
 tab = table(sub_data$gender, sub_data$usertype)
@@ -229,9 +228,8 @@ text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
 ```
 
-
-
 EDA userType / tripduration
+
 ```{r}
 EDA_UT = subset(sub_data, select = c(tripduration, usertype))
 
@@ -242,20 +240,15 @@ subscriber_dur = EDA_UT[EDA_UT$usertype == 1,]
 subscriber_dur = subset(subscriber_dur, select = -c(usertype))
 ```
 
-
 ```{r}
 plot(density(log(customer_dur$tripduration)))
 ```
-
 
 ```{r}
 par(mfrow=c(1,2))
 hist(labels_train, probability = TRUE)
 plot(density(tripdata_2019_r$age[tripdata_2019_r$age <= 80]), main = "Distribution of ages")
 ```
-
-
-
 
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
@@ -324,9 +317,6 @@ cat("\nRecall: ", round(recall(tab),2))
 
 ```
 
-
-
-
 ```{r}
 
 unknown = tripdata_2019_r[tripdata_2019_r$age > 80,]
@@ -357,20 +347,15 @@ un_data[c("tripduration", "starttime", "stoptime")] = lapply(un_data[c("tripdura
 pr_un_data = knn(data_train, un_data, cl=labels_train, k=10)
 ```
 
-
-
-
 ```{r}
 old_method = pr_un_data
 table(old_method)
 ```
+
 ```{r}
 new_method = pr_un_data
 table(new_method)
 ```
-
-
-
 
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
@@ -459,13 +444,10 @@ cat("\nRecall: ", round(recall(tab),2))
 
 ```
 
-
-
 ```{r}
 # Fit the model
 model = nnet::multinom(labels_train ~., data = data_train)
 ```
-
 
 ```{r}
 # Make predictions
@@ -473,7 +455,6 @@ predicted.classes = model %>% predict(data_test)
 # Model accuracy
 mean(predicted.classes == labels_test)
 ```
-
 
 ```{r}
 classifier_RF = randomForest(x = data_train,
@@ -501,22 +482,17 @@ importance(classifier_RF)
 varImpPlot(classifier_RF)
 ```
 
-
 ```{r}
 cat("Accuracy: ", round(accuracy(confusion_mtx),2))
 cat("\nPrecision: ", round(precision(confusion_mtx),2))
 cat("\nRecall: ", round(recall(confusion_mtx),2))
 ```
 
-
 ```{r}
 data$age = cut(data$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
 ```
 
-
-
 ```{r}
-
 our_palette = c(rgb(1, 0, 0), 
               rgb(0, 1, 0), 
               rgb(0, 0, 1), 
@@ -536,7 +512,63 @@ lines(c4, col = our_palette[4], lwd = 2)
 legend("topleft", 
        legend = c("16-29", "30-39", "40-59", "60-80"),
        fill = our_palette)
+```
+
+
+
+```{r}
+data$age = cut(data$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
+
+
+EDA_id_station = subset(data, select = c(start.station.name,
+                                         end.station.name,
+                                         age))
+
+start = unique(EDA_id_station$start.station.name)
+end = unique(EDA_id_station$end.station.name)
+setdiff(end,start)
+
+start_tab = data.frame(matrix(NA, nrow = length(start), ncol = 4))
+colnames(start_tab) <- c("1","2", "3", "4")
+
+
+for (rowIdx in 1:(nrow(start_tab))) {
+  for (colIdx in 1:(ncol(start_tab))) {
+    start_tab[rowIdx, colIdx] = nrow(subset(EDA_id_station, age == colIdx & start.station.name == start[rowIdx]))
+  }
+}
+
+start_tab$start_name = start
+
+```
+
+```{r}
+
+a = empty_tab[1:5,]
+
+bar = barplot(as.matrix(subset(a, select = -c(start_name))), 
+        beside = T,
+        cex.names = 0.5,
+        las=2,
+        col = heat.colors(5))
+
 
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

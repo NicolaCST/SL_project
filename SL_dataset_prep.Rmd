@@ -27,8 +27,8 @@ load_dataset = function(data_folder, file){
 Load dataset and remove col that are not useful for our purpose
 
 ```{r}
-tripdata_2019 = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2019.csv"))
-tripdata_2019_r = subset(tripdata_2019, select = -c(start.station.name, end.station.name))
+tripdata_2019_r = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2019.csv"))
+#tripdata_2019_r = subset(tripdata_2019, select = -c(start.station.name, end.station.name))
 colnames(tripdata_2019_r)
 rm(tripdata_2019)
 
