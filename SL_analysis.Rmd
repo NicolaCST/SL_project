@@ -259,7 +259,7 @@ plot(density(tripdata_2019_r$age[tripdata_2019_r$age <= 80]), main = "Distributi
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
-#rm(tripdata_2019_r)
+rm(tripdata_2019_r)
 
 data = subset(sub_data, select = -c(year, 
                                     birth.year, 
@@ -355,6 +355,9 @@ un_data[c("tripduration", "starttime", "stoptime")] = lapply(un_data[c("tripdura
 ##run knn function
 pr_un_data = knn(data_train, un_data, cl=labels_train, k=10)
 ```
+
+
+
 
 ```{r}
 old_method = pr_un_data
@@ -506,5 +509,21 @@ cat("\nPrecision: ", round(precision(confusion_mtx),2))
 cat("\nRecall: ", round(recall(confusion_mtx),2))
 ```
 
+```{r}
+data$age = cut(data$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
+
+hist(data[data$age == 1,]$month, prob=TRUE, breaks = 12)
+lines(density(data[data$age == 1,]$month, adjust = 3.5), col = "red")
+hist(data[data$age == 2,]$month, prob=TRUE, breaks = 12)
+lines(density(data[data$age == 2,]$month, adjust = 3.5), col = "red")
+hist(data[data$age == 3,]$month, prob=TRUE, breaks = 12)
+lines(density(data[data$age == 3,]$month, adjust = 3.5), col = "red")
+hist(data[data$age == 4,]$month, prob=TRUE, breaks = 12)
+lines(density(data[data$age == 4,]$month, adjust = 1.7), col = "red")
+
+
+ggplot(data, aes(x=month, fill=age)) + geom_histogram()
+data$age
+```
 
 
