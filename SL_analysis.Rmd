@@ -515,7 +515,6 @@ legend("topleft",
 ```
 
 
-
 ```{r}
 data$age = cut(data$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
 
@@ -524,42 +523,69 @@ EDA_id_station = subset(data, select = c(start.station.name,
                                          end.station.name,
                                          age))
 
-start = unique(EDA_id_station$start.station.name)
-end = unique(EDA_id_station$end.station.name)
-setdiff(end,start)
+# TOP 10 START #
+tab = as.data.frame(table(EDA_id_station$start.station.name))
+top_10_start = tab[order(tab$Freq, decreasing = T),][1:10,]
+colnames(top_10_start) = c("start_name", "Freq")
 
-start_tab = data.frame(matrix(NA, nrow = length(start), ncol = 4))
-colnames(start_tab) <- c("1","2", "3", "4")
-
+start_tab = data.frame(matrix(NA, nrow = nrow(top_10_start), ncol = 4))
+colnames(start_tab) = c("1","2", "3", "4")
 
 for (rowIdx in 1:(nrow(start_tab))) {
   for (colIdx in 1:(ncol(start_tab))) {
-    start_tab[rowIdx, colIdx] = nrow(subset(EDA_id_station, age == colIdx & start.station.name == start[rowIdx]))
+    start_tab[rowIdx, colIdx] = nrow(subset(EDA_id_station, age == colIdx & start.station.name == top_10_start[rowIdx,1]))
   }
 }
 
-start_tab$start_name = start
+start_tab$start_name = top_10_start$start_name
+
+
+# TOP 10 END #
+end_tab = as.data.frame(table(EDA_id_station$end.station.name))
+top_10_end = tab[order(end_tab$Freq, decreasing = T),][1:10,]
+colnames(top_10_end) = c("end_name", "Freq")
+
+end_tab = data.frame(matrix(NA, nrow = nrow(top_10_end), ncol = 4))
+colnames(end_tab) = c("1","2", "3", "4")
+
+for (rowIdx in 1:(nrow(end_tab))) {
+  for (colIdx in 1:(ncol(end_tab))) {
+    end_tab[rowIdx, colIdx] = nrow(subset(EDA_id_station, age == colIdx & end.station.name == top_10_end[rowIdx,1]))
+  }
+}
+
+end_tab$end_name = top_10_end$end_name
 
 ```
 
 ```{r}
 
-a = empty_tab[1:5,]
-
-bar = barplot(as.matrix(subset(a, select = -c(start_name))), 
+bar = barplot(as.matrix(subset(start_tab, select = -c(start_name))), 
         beside = T,
-        cex.names = 0.5,
-        las=2,
-        col = heat.colors(5))
+        cex.names = 1,
+        horiz = T,
+        las=1,
+        main = "TOP-10 Most used start station by age",
+        space = c(0,3),
+        col = heat.colors(nrow(start_tab)))
+
+legend("topright", legend = start_tab$start_name,
+       fill = heat.colors(nrow(start_tab)), cex = 0.8)
 
 
+bar = barplot(as.matrix(subset(end_tab, select = -c(end_name))), 
+        beside = T,
+        cex.names = 1,
+        horiz = T,
+        las=1,
+        main = "TOP-10 Most used start station by age",
+        space = c(0,3),
+        col = heat.colors(nrow(start_tab)))
+
+legend("topright", legend = end_tab$end_name,
+       fill = heat.colors(nrow(end_tab)), cex = 0.8)
 
 ```
-
-
-
-
-
 
 
 
