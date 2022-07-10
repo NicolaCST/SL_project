@@ -591,6 +591,18 @@ legend("topright", legend = end_tab$end_name,
 
 
 
+```{r}
+tab = table(data$age, data$start.station.name)
+dim(tab[,1:10])
+par(mar=c(4,11,4,4))
+barplot(tab[,1:10],
+        beside=TRUE,
+        col = c("darkgrey", "darkblue", "red", "yellow"),
+        las=1,
+        cex.axis = 1,
+        horiz = TRUE
+        )
+```
 
 
 
