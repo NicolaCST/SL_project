@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<head>    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    
+        <script>
+            L_NO_TOUCH = false;
+            L_DISABLE_3D = false;
+        </script>
+    
+    <style>html, body {width: 100%;height: 100%;margin: 0;padding: 0;}</style>
+    <style>#map {position:absolute;top:0;bottom:0;right:0;left:0;}</style>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_1bf69185f8b57282ee868f6b511ba34e {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+            </style>
+        
+</head>
+<body>    
+    
+            <div class="folium-map" id="map_1bf69185f8b57282ee868f6b511ba34e" ></div>
+        
+</body>
+<script>    
+    
+            var map_1bf69185f8b57282ee868f6b511ba34e = L.map(
+                "map_1bf69185f8b57282ee868f6b511ba34e",
+                {
+                    center: [42.361145, -71.057083],
+                    crs: L.CRS.EPSG3857,
+                    zoom: 12,
+                    zoomControl: true,
+                    preferCanvas: false,
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_ba8febb39aa6811001680aa766c6c6fa = L.tileLayer(
+                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {"attribution": "Data by \u0026copy; \u003ca href=\"http://openstreetmap.org\"\u003eOpenStreetMap\u003c/a\u003e, under \u003ca href=\"http://www.openstreetmap.org/copyright\"\u003eODbL\u003c/a\u003e.", "detectRetina": false, "maxNativeZoom": 18, "maxZoom": 18, "minZoom": 0, "noWrap": false, "opacity": 1, "subdomains": "abc", "tms": false}
+            ).addTo(map_1bf69185f8b57282ee868f6b511ba34e);
+        
+    
+            var feature_group_7439e6342ab4d1ac1543578c0cda15ea = L.featureGroup(
+                {}
+            ).addTo(map_1bf69185f8b57282ee868f6b511ba34e);
+        
+    
+            var marker_982bb8a75ca18982a6c897d9a140a2fa = L.marker(
+                [42.3621312344991, -71.0911560058594],
+                {}
+            ).addTo(feature_group_7439e6342ab4d1ac1543578c0cda15ea);
+        
+    
+        var popup_86062400469b4dded6609af1521c5770 = L.popup({"maxWidth": "100%"});
+
+        
+            var html_0e6df14e883915a78097ecbb6df9d1dc = $(`<div id="html_0e6df14e883915a78097ecbb6df9d1dc" style="width: 100.0%; height: 100.0%;">MIT Stata Center at Vassar St / Main St</div>`)[0];
+            popup_86062400469b4dded6609af1521c5770.setContent(html_0e6df14e883915a78097ecbb6df9d1dc);
+        
+
+        marker_982bb8a75ca18982a6c897d9a140a2fa.bindPopup(popup_86062400469b4dded6609af1521c5770)
+        ;
+
+        
+    
+    
+            var marker_5eb29fb602198edc706d29d925fe049d = L.marker(
+                [42.36507, -71.1031],
+                {}
+            ).addTo(feature_group_7439e6342ab4d1ac1543578c0cda15ea);
+        
+    
+        var popup_670a460da68d01413a486de6fadaf3e0 = L.popup({"maxWidth": "100%"});
+
+        
+            var html_28a1d41ce439161ec861c6f36fc5a199 = $(`<div id="html_28a1d41ce439161ec861c6f36fc5a199" style="width: 100.0%; height: 100.0%;">Central Square at Mass Ave / Essex St</div>`)[0];
+            popup_670a460da68d01413a486de6fadaf3e0.setContent(html_28a1d41ce439161ec861c6f36fc5a199);
+        
+
+        marker_5eb29fb602198edc706d29d925fe049d.bindPopup(popup_670a460da68d01413a486de6fadaf3e0)
+        ;
+
+        
+    
+    
+            var marker_0ce276c4abdc5330f20e4c3694342f15 = L.marker(
+                [42.352175, -71.055547],
+                {}
+            ).addTo(feature_group_7439e6342ab4d1ac1543578c0cda15ea);
+        
+    
+        var popup_d147c18713c3ec9cdecf986096024c7d = L.popup({"maxWidth": "100%"});
+
+        
+            var html_cf77b98a6925344c8a1b627101d724d1 = $(`<div id="html_cf77b98a6925344c8a1b627101d724d1" style="width: 100.0%; height: 100.0%;">South Station - 700 Atlantic Ave</div>`)[0];
+            popup_d147c18713c3ec9cdecf986096024c7d.setContent(html_cf77b98a6925344c8a1b627101d724d1);
+        
+
+        marker_0ce276c4abdc5330f20e4c3694342f15.bindPopup(popup_d147c18713c3ec9cdecf986096024c7d)
+        ;
+
+        
+    
+    
+            var marker_5203f5c4e08c565d72347140205aac39 = L.marker(
+                [42.3625, -71.08822],
+                {}
+            ).addTo(feature_group_7439e6342ab4d1ac1543578c0cda15ea);
+        
+    
+        var popup_ad1449575a958b84b43fc16346636516 = L.popup({"maxWidth": "100%"});
+
+        
+            var html_aef045be5cff2f3d217e530859370d86 = $(`<div id="html_aef045be5cff2f3d217e530859370d86" style="width: 100.0%; height: 100.0%;">Ames St at Main St</div>`)[0];
+            popup_ad1449575a958b84b43fc16346636516.setContent(html_aef045be5cff2f3d217e530859370d86);
+        
+
+        marker_5203f5c4e08c565d72347140205aac39.bindPopup(popup_ad1449575a958b84b43fc16346636516)
+        ;
+
+        
+    
+    
+            var marker_98bdcb585ff267652ff145aaedf2321f = L.marker(
+                [42.3581, -71.093198],
+                {}
+            ).addTo(feature_group_7439e6342ab4d1ac1543578c0cda15ea);
+        
+    
+        var popup_5279b36840343fdc775b3f7abec413cc = L.popup({"maxWidth": "100%"});
+
+        
+            var html_3786b3bdbd326b7a0c62d08474e4d449 = $(`<div id="html_3786b3bdbd326b7a0c62d08474e4d449" style="width: 100.0%; height: 100.0%;">MIT at Mass Ave / Amherst St</div>`)[0];
+            popup_5279b36840343fdc775b3f7abec413cc.setContent(html_3786b3bdbd326b7a0c62d08474e4d449);
+        
+
+        marker_98bdcb585ff267652ff145aaedf2321f.bindPopup(popup_5279b36840343fdc775b3f7abec413cc)
+        ;
+
+        
+    
+    
+            var marker_763f76acfe17a2d9a9cd999d7f90365c = L.marker(
+                [42.373268, -71.118579],
+                {}
+            ).addTo(feature_group_7439e6342ab4d1ac1543578c0cda15ea);
+        
+    
+        var popup_bd71860ef72218cb8b4646dff0b86ccc = L.popup({"maxWidth": "100%"});
+
+        
+            var html_7a74523a7c34978b392880ebce8535aa = $(`<div id="html_7a74523a7c34978b392880ebce8535aa" style="width: 100.0%; height: 100.0%;">Harvard Square at Mass Ave/ Dunster</div>`)[0];
+            popup_bd71860ef72218cb8b4646dff0b86ccc.setContent(html_7a74523a7c34978b392880ebce8535aa);
+        
+
+        marker_763f76acfe17a2d9a9cd999d7f90365c.bindPopup(popup_bd71860ef72218cb8b4646dff0b86ccc)
+        ;
+
+        
+    
+    
+            var marker_e2eab0a8c9e19ec061626eeb2c6e6072 = L.marker(
+                [42.3624278429124, -71.0849547386169],
+                {}
+            ).addTo(feature_group_7439e6342ab4d1ac1543578c0cda15ea);
+        
+    
+        var popup_defb823f2969117aa2dcf6313fe83a55 = L.popup({"maxWidth": "100%"});
+
+        
+            var html_03b53f325ca3bf6cbdac8ba7271b2db7 = $(`<div id="html_03b53f325ca3bf6cbdac8ba7271b2db7" style="width: 100.0%; height: 100.0%;">Kendall T</div>`)[0];
+            popup_defb823f2969117aa2dcf6313fe83a55.setContent(html_03b53f325ca3bf6cbdac8ba7271b2db7);
+        
+
+        marker_e2eab0a8c9e19ec061626eeb2c6e6072.bindPopup(popup_defb823f2969117aa2dcf6313fe83a55)
+        ;
+
+        
+    
+    
+            var marker_8138b652870086ac0b13966b5dbf9830 = L.marker(
+                [42.3595732010904, -71.1012947559357],
+                {}
+            ).addTo(feature_group_7439e6342ab4d1ac1543578c0cda15ea);
+        
+    
+        var popup_a4f1e9e6992ae566ed2cad88535a320b = L.popup({"maxWidth": "100%"});
+
+        
+            var html_402e071decb60d8c358c0dd31de98cab = $(`<div id="html_402e071decb60d8c358c0dd31de98cab" style="width: 100.0%; height: 100.0%;">MIT Pacific St at Purrington St</div>`)[0];
+            popup_a4f1e9e6992ae566ed2cad88535a320b.setContent(html_402e071decb60d8c358c0dd31de98cab);
+        
+
+        marker_8138b652870086ac0b13966b5dbf9830.bindPopup(popup_a4f1e9e6992ae566ed2cad88535a320b)
+        ;
+
+        
+    
+    
+            var marker_ece66c65894652d118731e746392a695 = L.marker(
+                [42.3556012132793, -71.1039447784424],
+                {}
+            ).addTo(feature_group_7439e6342ab4d1ac1543578c0cda15ea);
+        
+    
+        var popup_abf89dd4c89764c7e94fe83a494f1f77 = L.popup({"maxWidth": "100%"});
+
+        
+            var html_07a8f31d00dd2afbd43ed1b87405a7b2 = $(`<div id="html_07a8f31d00dd2afbd43ed1b87405a7b2" style="width: 100.0%; height: 100.0%;">MIT Vassar St</div>`)[0];
+            popup_abf89dd4c89764c7e94fe83a494f1f77.setContent(html_07a8f31d00dd2afbd43ed1b87405a7b2);
+        
+
+        marker_ece66c65894652d118731e746392a695.bindPopup(popup_abf89dd4c89764c7e94fe83a494f1f77)
+        ;
+
+        
+    
+    
+            var marker_61bab35a108bedec475bdc64c57d75a4 = L.marker(
+                [42.365673, -71.064263],
+                {}
+            ).addTo(feature_group_7439e6342ab4d1ac1543578c0cda15ea);
+        
+    
+        var popup_c2d64316017f5516480ab56b621adbf1 = L.popup({"maxWidth": "100%"});
+
+        
+            var html_4971a08c86b809e4bbf242c6a3a66c9d = $(`<div id="html_4971a08c86b809e4bbf242c6a3a66c9d" style="width: 100.0%; height: 100.0%;">Nashua Street at Red Auerbach Way</div>`)[0];
+            popup_c2d64316017f5516480ab56b621adbf1.setContent(html_4971a08c86b809e4bbf242c6a3a66c9d);
+        
+
+        marker_61bab35a108bedec475bdc64c57d75a4.bindPopup(popup_c2d64316017f5516480ab56b621adbf1)
+        ;
+
+        
+    
+</script>
