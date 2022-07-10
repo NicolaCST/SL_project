@@ -516,6 +516,16 @@ legend("topleft",
 
 
 ```{r}
+
+data = subset(sub_data, select = c(age,
+                                  start.station.name,
+                                  start.station.latitude, 
+                                  start.station.longitude,
+                                  end.station.name,
+                                  end.station.latitude, 
+                                  end.station.longitude))
+
+
 data$age = cut(data$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
 
 
@@ -538,6 +548,7 @@ for (rowIdx in 1:(nrow(start_tab))) {
 }
 
 start_tab$start_name = top_10_start$start_name
+
 
 
 # TOP 10 END #
@@ -590,11 +601,69 @@ legend("topright", legend = end_tab$end_name,
 
 
 
+```{r}
+map_start = subset(sub_data, select = c(start.station.name,
+                                  start.station.latitude, 
+                                  start.station.longitude))
+
+map_start = map_start[!duplicated(map_start[ , c("start.station.name")]),]
+
+map_start = map_start[map_start$start.station.name %in% start_tab$start_name,]
+
+write.csv(map_start, "C:/Users/Utente/Desktop/SL_project/2019_pos.csv", row.names = FALSE)
+
+```
+
+
+
+```{python}
+import pandas as pd
+import numpy as np # linear algebra
+import folium
+import webbrowser
+
+df_acc = pd.read_csv('C:/Users/Utente/Desktop/SL_project/2019_pos.csv', dtype=object)
+
+map_hooray = folium.Map(location=[42.361145, -71.057083], zoom_start = 12) 
+
+df_acc['start.station.latitude'] = df_acc['start.station.latitude'].astype(float)
+df_acc['start.station.longitude'] = df_acc['start.station.longitude'].astype(float)
+df_acc['start.station.name'] = df_acc['start.station.name'].astype(str)
+
+
+feature_group = folium.FeatureGroup("Locations")
+lat = df_acc['start.station.latitude']
+lng = df_acc['start.station.longitude']
+name = df_acc['start.station.name']
+
+for lt, lg, nm in zip(lat, lng, name):
+    feature_group.add_child(folium.Marker(location=[lt,lg],popup=nm))
+
+map_hooray.add_child(feature_group)
+
+
+map_hooray.save("BostonMap.html")
+
+```
 
 
 
 
+```{r}
+
+rstudio_viewer <- function(file_name, file_path = NULL) {
+    temporary_file <- tempfile()
+    dir.create(temporary_file)
+    html_file <- file.path(temporary_file, file_name)
+    current_path <- ifelse(is.null(file_path),
+                           getwd(),
+                           path.expand(file_path))
+    file.copy(file.path(current_path, file_name), html_file)
+    rstudioapi::viewer(html_file)
+}
 
 
 
+rstudio_viewer("BostonMap.html", "C:/Users/Utente/Desktop/SL_project/")
+```
 
