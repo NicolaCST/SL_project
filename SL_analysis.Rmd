@@ -614,51 +614,6 @@ barplot(tab[,1:10],
 
 
 ```{r}
-map_start = subset(sub_data, select = c(start.station.name,
-                                  start.station.latitude, 
-                                  start.station.longitude))
-
-map_start = map_start[!duplicated(map_start[ , c("start.station.name")]),]
-
-map_start = map_start[map_start$start.station.name %in% start_tab$start_name,]
-
-write.csv(map_start, "C:/Users/Utente/Desktop/SL_project/2019_pos.csv", row.names = FALSE)
-
-```
-
-
-
-```{python}
-import pandas as pd
-import numpy as np # linear algebra
-import folium
-import webbrowser
-
-df_acc = pd.read_csv('C:/Users/Utente/Desktop/SL_project/2019_pos.csv', dtype=object)
-
-map_hooray = folium.Map(location=[42.361145, -71.057083], zoom_start = 12) 
-
-df_acc['start.station.latitude'] = df_acc['start.station.latitude'].astype(float)
-df_acc['start.station.longitude'] = df_acc['start.station.longitude'].astype(float)
-df_acc['start.station.name'] = df_acc['start.station.name'].astype(str)
-
-
-feature_group = folium.FeatureGroup("Locations")
-lat = df_acc['start.station.latitude']
-lng = df_acc['start.station.longitude']
-name = df_acc['start.station.name']
-
-for lt, lg, nm in zip(lat, lng, name):
-    feature_group.add_child(folium.Marker(location=[lt,lg],popup=nm))
-
-map_hooray.add_child(feature_group)
-
-
-map_hooray.save("BostonMap.html")
-
-```
-
-```{r}
 tab = table(data$age, data$start.station.name)
 dim(tab[,1:10])
 par(mar=c(4,11,4,4))
@@ -671,6 +626,60 @@ barplot(tab[,1:10],
         )
 ```
 
+
+
+```{r}
+map_start = subset(sub_data, select = c(start.station.name,
+                                  start.station.latitude, 
+                                  start.station.longitude))
+map_start = map_start[!duplicated(map_start[ , c("start.station.name")]),]
+map_start = map_start[map_start$start.station.name %in% start_tab$start_name,]
+
+
+map_end = subset(sub_data, select = c(end.station.name,
+                                  end.station.latitude, 
+                                  end.station.longitude))
+map_end = map_end[!duplicated(map_end[ , c("end.station.name")]),]
+map_end = map_end[map_end$end.station.name %in% end_tab$end_name,]
+
+
+
+pos_19 = cbind(map_start, 
+               end.station.name = map_end$end.station.name,
+               end.station.latitude = map_end$end.station.latitude,
+               end.station.longitude = map_end$end.station.longitude)
+
+write.csv(pos_19, paste(getwd(), "SL_dataset/2019_pos.csv", sep = "/"), row.names = FALSE)
+```
+
+
+```{python}
+import pandas as pd
+import numpy as np
+import folium
+import webbrowser
+
+df_acc = pd.read_csv('C:/Users/Utente/Desktop/SL_project/SL_dataset/2019_pos.csv', dtype=object)
+
+map_hooray = folium.Map(location=[42.361145, -71.057083], zoom_start = 12) 
+
+df_acc['start.station.name'] = df_acc['start.station.name'].astype(str)
+df_acc['start.station.latitude'] = df_acc['start.station.latitude'].astype(float)
+df_acc['start.station.longitude'] = df_acc['start.station.longitude'].astype(float)
+
+
+feature_group = folium.FeatureGroup("LocationsStart")
+lat = df_acc['start.station.latitude']
+lng = df_acc['start.station.longitude']
+name = df_acc['start.station.name']
+
+for lt, lg, nm in zip(lat, lng, name):
+    feature_group.add_child(folium.Marker(location=[lt,lg],popup=nm,icon=folium.Icon(color="blue")))
+
+map_hooray.add_child(feature_group)
+
+map_hooray.save("BostonMap.html")
+```
 
 
 ```{r}
@@ -687,7 +696,6 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
 }
 
 
-
-rstudio_viewer("BostonMap.html", "C:/Users/Utente/Desktop/SL_project/")
+rstudio_viewer("BostonMap.html", getwd())
 ```
 
