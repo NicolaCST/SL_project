@@ -20,6 +20,7 @@ tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 ```{r}
 par(mfrow=c(1,2))
 
+sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
 month_19 = table(sub_data$month)
 
 freq_month_19 = barplot(month_19, 
@@ -65,10 +66,6 @@ plot(dens)
 
 ```{r}
 boxplot(tripdata_2019_r$age)
-```
-
-```{r}
-sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
 ```
 
 ```{r}
@@ -155,7 +152,7 @@ ggpairs(X)
 ```
 
 ```{r}
-sub_data = subset(sub_data, select = -c(year, birth.year))
+sub_data = subset(sub_data, select = -c(year, birth.year, start.station.name, end.station.name))
 round(var(sub_data),2)
 ```
 
@@ -259,10 +256,12 @@ data = subset(sub_data, select = -c(year,
                                     birth.year, 
                                     #startday, 
                                     stopday,
-                                    end.station.id,  
+                                    start.station.name,  
                                     start.station.id, 
                                     start.station.latitude, 
                                     start.station.longitude, 
+                                    end.station.name,
+                                    end.station.id,
                                     end.station.latitude, 
                                     end.station.longitude))
 
@@ -318,17 +317,19 @@ cat("\nRecall: ", round(recall(tab),2))
 ```
 
 ```{r}
-
+tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 unknown = tripdata_2019_r[tripdata_2019_r$age > 80,]
 
 un_data = subset(unknown, select = -c(year, 
                                     birth.year, 
                                     #startday, 
                                     stopday,
-                                    end.station.id,  
+                                    start.station.name,
                                     start.station.id, 
                                     start.station.latitude, 
                                     start.station.longitude, 
+                                    end.station.name,
+                                    end.station.id, 
                                     end.station.latitude, 
                                     end.station.longitude,
                                     age,
@@ -368,8 +369,10 @@ data = subset(sub_data, select = -c(year,
                                     stopday,
                                     #end.station.id,  
                                     #start.station.id, 
+                                    start.station.name,
                                     start.station.latitude, 
                                     start.station.longitude, 
+                                    end.station.name,
                                     end.station.latitude, 
                                     end.station.longitude))
 
@@ -569,6 +572,7 @@ end_tab$end_name = top_10_end$end_name
 
 ```
 
+
 ```{r}
 
 bar = barplot(as.matrix(subset(start_tab, select = -c(start_name))), 
@@ -600,33 +604,8 @@ legend("topright", legend = end_tab$end_name,
 
 
 ```{r}
-tab = table(data$age, data$start.station.name)
-dim(tab[,1:10])
-par(mar=c(4,11,4,4))
-barplot(tab[,1:10],
-        beside=TRUE,
-        col = c("darkgrey", "darkblue", "red", "yellow"),
-        las=1,
-        cex.axis = 1,
-        horiz = TRUE
-        )
+temp$start.station.name[1]
 ```
-
-
-```{r}
-tab = table(data$age, data$start.station.name)
-dim(tab[,1:10])
-par(mar=c(4,11,4,4))
-barplot(tab[,1:10],
-        beside=TRUE,
-        col = c("darkgrey", "darkblue", "red", "yellow"),
-        las=1,
-        cex.axis = 1,
-        horiz = TRUE
-        )
-```
-
-
 
 ```{r}
 map_start = subset(sub_data, select = c(start.station.name,
@@ -695,7 +674,80 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
     rstudioapi::viewer(html_file)
 }
 
-
-rstudio_viewer("BostonMap.html", getwd())
+#rstudio_viewer("BostonMap.html", getwd())
 ```
+
+
+
+```{r}
+tab = as.data.frame(table(data$age, data$start.station.name))
+colnames(tab) = c("age", "start.station.name", "freq")
+
+
+one = tab[tab$age == 1,]
+temp = one[order(one$freq, decreasing = T),][1:10,]
+
+two = tab[tab$age == 2,]
+temp = rbind(temp, (two[order(two$freq, decreasing = T),][1:10,]))
+
+three = tab[tab$age == 3,]
+temp = rbind(temp, (three[order(three$freq, decreasing = T),][1:10,]))
+
+four = tab[tab$age == 4,]
+temp = rbind(temp, (four[order(four$freq, decreasing = T),][1:10,]))
+
+temp$lat = NA
+temp$long = NA
+
+for (idx in 1:nrow(temp)){
+  name = temp$start.station.name[idx]
+  
+  temp[idx, 4] = data$start.station.latitude[data$start.station.name == name][1]
+  temp[idx, 5] = data$start.station.longitude[data$start.station.name == name]
+}
+
+
+write.csv(temp, paste(getwd(), "SL_dataset/start_station_by_age_19.csv", sep = "/"), row.names = FALSE)
+```
+
+
+```{python}
+df_acc = pd.read_csv('C:/Users/Utente/Desktop/SL_project/SL_dataset/start_station_by_age_19.csv', dtype=object)
+
+df_acc['start.station.name'] = df_acc['start.station.name'].astype(str)
+df_acc['age'] = df_acc['age'].astype(int)
+df_acc['freq'] = df_acc['freq'].astype(int)
+df_acc['lat'] = df_acc['lat'].astype(float)
+df_acc['long'] = df_acc['long'].astype(float)
+
+
+for i in range(1,5):
+  map_hooray = folium.Map(location=[42.361145, -71.057083], zoom_start = 12) 
+  feature = "LocationsStart_" + str(i)
+  
+  
+  fil = df_acc[df_acc['age'] == i]
+  feature_group = folium.FeatureGroup(feature)
+  lat = fil['lat']
+  lng = fil['long']
+  name = fil['start.station.name']
+  
+  
+  for lt, lg, nm in zip(lat, lng, name):
+      feature_group.add_child(folium.Marker(location=[lt,lg],popup=nm,icon=folium.Icon(color="blue")))
+  
+  
+  map_hooray.add_child(feature_group)
+  map_hooray.save("BostonMap_age" + str(i) + ".html")
+
+```
+
+```{r}
+rstudio_viewer("BostonMap_age1.html", getwd())
+```
+
+
+
+
+
 
