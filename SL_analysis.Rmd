@@ -604,6 +604,22 @@ legend("topright", legend = end_tab$end_name,
 
 
 ```{r}
+tab = as.data.frame(table(data$age, data$start.station.name, data$start.station.latitude))
+temp = order(colSums(tab), decreasing = T)
+temp = as.data.frame(tab[,temp[1:10],])
+
+par(mar=c(4,16,4,0))
+barplot(temp,
+        beside=TRUE,
+        col = c("darkgrey", "darkblue", "red", "yellow"),
+        las=1,
+        cex.axis = 1,
+        horiz = TRUE
+        )
+```
+
+
+```{r}
 temp$start.station.name[1]
 ```
 
