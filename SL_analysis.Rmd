@@ -44,6 +44,19 @@ min_per_month_19 = barplot(mean_dur_19,
      col = "light green",
      names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
 ```
+```{r}
+dates <- vector(mode="character", length=nrow(sub_data))
+for (i in 1:nrow(sub_data)){
+  dates[i] = paste(sub_data$year[i], sub_data$month[i], sub_data$startday[i], sep="-")
+}
+dates <- weekdays(as.Date(dates))
+sub_data$dayname = dates
+
+tab = table(sub_data$dayname)
+barplot(tab)
+```
+
+
 
 ```{r}
 cat("min age:", min(tripdata_2019_r$age))
@@ -763,6 +776,9 @@ rstudio_viewer("BostonMap_age1.html", getwd())
 ```
 
 
+```{r}
+
+```
 
 
 
