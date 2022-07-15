@@ -523,6 +523,13 @@ cat("\nRecall: ", round(recall(confusion_mtx),2))
 ```
 
 ```{r}
+rocs = multiclass.roc(as.numeric(labels_test), as.numeric(y_pred))
+rs = rocs[["rocs"]]
+plot.roc(rs[[1]])
+sapply(2:length(rs),function(i) lines.roc(rs[[i]],col=i))
+```
+
+```{r}
 data$age = cut(data$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
 ```
 
