@@ -44,6 +44,7 @@ min_per_month_19 = barplot(mean_dur_19,
      col = "light green",
      names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
 ```
+
 ```{r}
 dates <- vector(mode="character", length=nrow(sub_data))
 for (i in 1:nrow(sub_data)){
@@ -872,7 +873,6 @@ cat("\nRecall: ", round(recall(tab),2))
 pr_linear
 ```
 
-
 ```{r}
 pr_quadratic = qda(age~., data = data_train)
 prediciton_quadratic = pr_quadratic %>% predict(data_test)
@@ -896,5 +896,188 @@ cat("Accuracy: ", round(accuracy(tab),2))
 cat("\nPrecision: ", round(precision(tab),2))
 cat("\nRecall: ", round(recall(tab),2))
 ```
+
+
+#ASSUMING GENDER
+```{r}
+tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
+sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
+rm(tripdata_2019_r)
+
+data = subset(sub_data, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    #end.station.id,  
+                                    #start.station.id, 
+                                    start.station.name,
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.name,
+                                    end.station.latitude, 
+                                    end.station.longitude))
+
+
+
+data$tripduration = round(data$tripduration/60,2)
+data$starttime = round(data$starttime/60,2)
+data$stoptime = round(data$stoptime/60,2)
+
+
+##the normalization function is created
+nor = function(x) { (x -min(x))/(max(x)-min(x))   }
+
+
+data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
+
+
+a = subset(data, age >= 16 & age < 30 & gender != 0)
+b = subset(data, age >= 30 & age < 40 & gender != 0)
+c = subset(data, age >= 40 & age < 60 & gender != 0)
+d = subset(data, age >= 60 & age <= 80 & gender != 0)
+
+
+##Generate a random number that is 90% of the total number of rows in dataset.
+ran = sample(1:nrow(d), 0.9 * nrow(d)) 
+
+##extract training set
+a_s = a[ran,]
+b_s = b[ran,]
+c_s = c[ran,]
+d_s = d[ran,]
+
+
+ran_test = sample(1:nrow(d), 0.1 * nrow(d)) 
+##extract testing set
+a_t = a[ran_test,]
+b_t = b[ran_test,]
+c_t = c[ran_test,]
+d_t = d[ran_test,]
+
+
+data_train = rbind(a_s, b_s, c_s, d_s)
+data_test = rbind(a_t, b_t, c_t, d_t)
+
+rm(a,b,c,d, a_s, b_s, c_s, d_s, a_t, b_t, c_t, d_t)
+
+
+data_train$age = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+data_test$age = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+
+labels_train = data_train$gender
+labels_test = data_test$gender
+
+data_train = subset(data_train, select = -c(gender))
+data_test = subset(data_test, select = -c(gender))
+
+
+library(randomForest)
+classifier_RF = randomForest(x = data_train,
+                             y = as.factor(labels_train),
+                             ntree = 100)
+
+# Predicting the Test set results
+y_pred = predict(classifier_RF, newdata = data_test)
+  
+# Confusion Matrix
+confusion_mtx = table(y_pred, labels_test)
+confusion_mtx
+
+# Plotting model
+plot(classifier_RF)
+  
+# Importance plot
+importance(classifier_RF)
+  
+# Variable importance plot
+varImpPlot(classifier_RF)
+
+cat("Accuracy: ", round(accuracy(confusion_mtx),2))
+cat("\nPrecision: ", round(precision(confusion_mtx),2))
+cat("\nRecall: ", round(recall(confusion_mtx),2))
+```
+
+```{r}
+tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
+sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
+rm(tripdata_2019_r)
+
+data = subset(sub_data, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    #end.station.id,  
+                                    #start.station.id, 
+                                    start.station.name,
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.name,
+                                    end.station.latitude, 
+                                    end.station.longitude))
+
+
+
+data$tripduration = round(data$tripduration/60,2)
+data$starttime = round(data$starttime/60,2)
+data$stoptime = round(data$stoptime/60,2)
+
+
+##the normalization function is created
+nor = function(x) { (x -min(x))/(max(x)-min(x))   }
+
+
+data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
+
+
+a = subset(data, age >= 16 & age < 30 & gender != 0)
+b = subset(data, age >= 30 & age < 40 & gender != 0)
+c = subset(data, age >= 40 & age < 60 & gender != 0)
+d = subset(data, age >= 60 & age <= 80 & gender != 0)
+
+
+##Generate a random number that is 90% of the total number of rows in dataset.
+ran = sample(1:nrow(d), 0.9 * nrow(d)) 
+
+##extract training set
+a_s = a[ran,]
+b_s = b[ran,]
+c_s = c[ran,]
+d_s = d[ran,]
+
+
+ran_test = sample(1:nrow(d), 0.1 * nrow(d)) 
+##extract testing set
+a_t = a[ran_test,]
+b_t = b[ran_test,]
+c_t = c[ran_test,]
+d_t = d[ran_test,]
+
+
+data_train = rbind(a_s, b_s, c_s, d_s)
+data_test = rbind(a_t, b_t, c_t, d_t)
+
+rm(a,b,c,d, a_s, b_s, c_s, d_s, a_t, b_t, c_t, d_t)
+
+
+data_train$age = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+data_test$age = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+
+
+pr_linear =  qda(gender~., data = data_train)
+prediciton = pr_linear %>% predict(data_test)
+
+# Model accuracy
+mean(prediciton$class==data_test$gender)
+
+##create confusion matrix
+tab = table(prediciton$class, data_test$gender)
+
+
+cat("Accuracy: ", round(accuracy(tab),2))
+cat("\nPrecision: ", round(precision(tab),2))
+cat("\nRecall: ", round(recall(tab),2))
+```
+
+
 
 
