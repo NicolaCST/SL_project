@@ -21,6 +21,53 @@ nor = function(x) { (x -min(x))/(max(x)-min(x))   }
 accuracy = function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
 precision = function(x){(diag(x)/((rowSums(x)))) * 100}
 recall = function(x){(diag(x)/((colSums(x)))) * 100}
+
+
+#returns two dataset: train and test
+get_balanced_dataset = function(data, w_gender=0){
+  
+  data$tripduration = round(data$tripduration/60,2)
+  data$starttime = round(data$starttime/60,2)
+  data$stoptime = round(data$stoptime/60,2)
+  
+  data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
+  
+  if (w_gender != 0){
+    a = subset(data, age >= 16 & age < 30 & gender != 0)
+    b = subset(data, age >= 30 & age < 40 & gender != 0)
+    c = subset(data, age >= 40 & age < 60 & gender != 0)
+    d = subset(data, age >= 60 & age <= 80 & gender != 0)
+  }else{
+    a = subset(data, age >= 16 & age < 30)
+    b = subset(data, age >= 30 & age < 40)
+    c = subset(data, age >= 40 & age < 60)
+    d = subset(data, age >= 60 & age <= 80)
+  }
+    
+  
+  ##Generate a random number that is 90% of the total number of rows in dataset.
+  ran = sample(1:nrow(d), 0.9 * nrow(d)) 
+  ##extract training set
+  a_s = a[ran,]
+  b_s = b[ran,]
+  c_s = c[ran,]
+  d_s = d[ran,]
+  
+  
+  ran_test = sample(1:nrow(d), 0.1 * nrow(d)) 
+  ##extract testing set
+  a_t = a[ran_test,]
+  b_t = b[ran_test,]
+  c_t = c[ran_test,]
+  d_t = d[ran_test,]
+  
+  data_train = rbind(a_s, b_s, c_s, d_s)
+  data_test = rbind(a_t, b_t, c_t, d_t)
+  
+  rm(a,b,c,d, a_s, b_s, c_s, d_s, a_t, b_t, c_t, d_t)
+  
+  return(list(data_train, data_test))
+}
 ```
 
 ```{r}
@@ -406,55 +453,16 @@ data = subset(sub_data, select = -c(year,
                                     end.station.longitude))
 
 
-
-data$tripduration = round(data$tripduration/60,2)
-data$starttime = round(data$starttime/60,2)
-data$stoptime = round(data$stoptime/60,2)
-
-
-##the normalization function is created
-nor = function(x) { (x -min(x))/(max(x)-min(x))   }
-
-
-data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
-
-
-a = subset(data, age >= 16 & age <30)
-b = subset(data, age >= 30 & age <40)
-c = subset(data, age >= 40 & age <60)
-d = subset(data, age >= 60 & age <=80)
-
-
-
-##Generate a random number that is 90% of the total number of rows in dataset.
-ran = sample(1:nrow(d), 0.9 * nrow(d)) 
-
-##extract training set
-a_s = a[ran,]
-b_s = b[ran,]
-c_s = c[ran,]
-d_s = d[ran,]
-
-
-ran_test = sample(1:nrow(d), 0.1 * nrow(d)) 
-##extract testing set
-a_t = a[ran_test,]
-b_t = b[ran_test,]
-c_t = c[ran_test,]
-d_t = d[ran_test,]
-
-
-data_train = rbind(a_s, b_s, c_s, d_s)
-data_test = rbind(a_t, b_t, c_t, d_t)
-
-rm(a,b,c,d, a_s, b_s, c_s, d_s, a_t, b_t, c_t, d_t)
+full = get_balanced_dataset(data, w_gender = 0)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
 
 #our Y
 labels_train = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
 labels_test = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
 
 data_train = subset(data_train, select = -c(age, gender))
-data_test = subset(data_test, select = -c(age, gender))
+data_test = subset(data_test, select = -c(age, gender)) #gender? perchè lo togliamo?
 
 
 library(class)
@@ -463,12 +471,6 @@ pr = knn(data_train, data_test, cl=labels_train, k=10)
 
 ##create confusion matrix
 tab = table(pr, labels_test)
-
-##this function divides the correct predictions by total number of predictions that tell us how accurate teh model is.
-accuracy = function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
-precision = function(x){(diag(x)/((rowSums(x)))) * 100}
-recall = function(x){(diag(x)/((colSums(x)))) * 100}
-
 
 cat("Accuracy: ", round(accuracy(tab),2))
 cat("\nPrecision: ", round(precision(tab),2))
@@ -852,6 +854,8 @@ data_test = rbind(a_t, b_t, c_t, d_t)
 
 rm(a,b,c,d, a_s, b_s, c_s, d_s, a_t, b_t, c_t, d_t)
 
+
+
 #our Y
 labels_train = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
 labels_test = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
@@ -907,45 +911,6 @@ cat("\nRecall: ", round(recall(tab),2))
 
 #ASSUMING GENDER
 ```{r}
-#returns two dataset: train and test
-get_balanced_dataset = function(data){
-  
-  data$tripduration = round(data$tripduration/60,2)
-  data$starttime = round(data$starttime/60,2)
-  data$stoptime = round(data$stoptime/60,2)
-  
-  data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
-  
-  a = subset(data, age >= 16 & age < 30 & gender != 0)
-  b = subset(data, age >= 30 & age < 40 & gender != 0)
-  c = subset(data, age >= 40 & age < 60 & gender != 0)
-  d = subset(data, age >= 60 & age <= 80 & gender != 0)
-  
-  
-  ##Generate a random number that is 90% of the total number of rows in dataset.
-  ran = sample(1:nrow(d), 0.9 * nrow(d)) 
-  ##extract training set
-  a_s = a[ran,]
-  b_s = b[ran,]
-  c_s = c[ran,]
-  d_s = d[ran,]
-  
-  
-  ran_test = sample(1:nrow(d), 0.1 * nrow(d)) 
-  ##extract testing set
-  a_t = a[ran_test,]
-  b_t = b[ran_test,]
-  c_t = c[ran_test,]
-  d_t = d[ran_test,]
-  
-  data_train = rbind(a_s, b_s, c_s, d_s)
-  data_test = rbind(a_t, b_t, c_t, d_t)
-  
-  rm(a,b,c,d, a_s, b_s, c_s, d_s, a_t, b_t, c_t, d_t)
-  
-  return(list(data_train, data_test))
-}
-
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
 rm(tripdata_2019_r)
@@ -965,7 +930,7 @@ data = subset(sub_data, select = -c(year,
 
 
 
-full = get_balanced_dataset(data)
+full = get_balanced_dataset(data, w_gender = 1)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
@@ -1029,7 +994,7 @@ data = subset(sub_data, select = -c(year,
                                     end.station.longitude))
 
 
-full = get_balanced_dataset(data)
+full = get_balanced_dataset(data, w_gender = 1)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
