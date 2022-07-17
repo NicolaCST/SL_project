@@ -4,6 +4,12 @@ library(rmarkdown)
 library(knitr)
 library(ggplot2)
 library(GGally)
+library(class)
+library(Hmisc)
+library(corrplot)
+library(class)
+library(randomForest)
+library(mda)
 ```
 
 ```{r}
@@ -68,6 +74,34 @@ get_balanced_dataset = function(data, w_gender=0){
   
   return(list(data_train, data_test))
 }
+
+# ++++++++++++++++++++++++++++
+# flattenCorrMatrix
+# ++++++++++++++++++++++++++++
+# cormat : matrix of the correlation coefficients
+# pmat : matrix of the correlation p-values
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+
+rstudio_viewer <- function(file_name, file_path = NULL) {
+    temporary_file <- tempfile()
+    dir.create(temporary_file)
+    html_file <- file.path(temporary_file, file_name)
+    current_path <- ifelse(is.null(file_path),
+                           getwd(),
+                           path.expand(file_path))
+    file.copy(file.path(current_path, file_name), html_file)
+    rstudioapi::viewer(html_file)
+}
+
 ```
 
 ```{r}
@@ -205,8 +239,6 @@ confint(model)
 I mean, siamo passati dallo spiegare lo 0.08% della varianza al 2.4%, ma non so se sia la strada giusta
 
 ```{r}
-library(broom)
-
 mod = augment(model)
 
 qqnorm(mod$.resid)
@@ -228,24 +260,6 @@ round(var(sub_data),2)
 ```
 
 ```{r}
-# ++++++++++++++++++++++++++++
-# flattenCorrMatrix
-# ++++++++++++++++++++++++++++
-# cormat : matrix of the correlation coefficients
-# pmat : matrix of the correlation p-values
-flattenCorrMatrix <- function(cormat, pmat) {
-  ut <- upper.tri(cormat)
-  data.frame(
-    row = rownames(cormat)[row(cormat)[ut]],
-    column = rownames(cormat)[col(cormat)[ut]],
-    cor  =(cormat)[ut],
-    p = pmat[ut]
-    )
-}
-```
-
-```{r}
-library(Hmisc)
 res2<-rcorr(as.matrix(sub_data))
 a = as.data.frame(flattenCorrMatrix(res2$r, res2$P))
 ```
@@ -255,7 +269,7 @@ res = cor(sub_data)
 ```
 
 ```{r}
-library(corrplot)
+
 corrplot(res, type = "upper", order = "hclust", 
          tl.col = "black", tl.srt = 45)
 ```
@@ -347,11 +361,6 @@ data$tripduration = round(data$tripduration/60,2)
 data$starttime = round(data$starttime/60,2)
 data$stoptime = round(data$stoptime/60,2)
 
-
-##the normalization function is created
-nor = function(x) { (x -min(x))/(max(x)-min(x))   }
-
-
 data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
 
 
@@ -373,17 +382,11 @@ data_train = subset(data_train, select = -c(age, gender))
 data_test = subset(data_test, select = -c(age, gender))
 
 
-library(class)
 ##run knn function
 pr = knn(data_train, data_test, cl=labels_train, k=10)
 
 ##create confusion matrix
 tab = table(pr, labels_test)
-
-##this function divides the correct predictions by total number of predictions that tell us how accurate teh model is.
-accuracy = function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
-precision = function(x){(diag(x)/((rowSums(x)))) * 100}
-recall = function(x){(diag(x)/((colSums(x)))) * 100}
 
 
 cat("Accuracy: ", round(accuracy(tab),2))
@@ -465,7 +468,6 @@ data_train = subset(data_train, select = -c(age, gender))
 data_test = subset(data_test, select = -c(age, gender)) #gender? perchè lo togliamo?
 
 
-library(class)
 ##run knn function
 pr = knn(data_train, data_test, cl=labels_train, k=10)
 
@@ -716,24 +718,6 @@ map_hooray.save("BostonMap.html")
 
 
 ```{r}
-
-rstudio_viewer <- function(file_name, file_path = NULL) {
-    temporary_file <- tempfile()
-    dir.create(temporary_file)
-    html_file <- file.path(temporary_file, file_name)
-    current_path <- ifelse(is.null(file_path),
-                           getwd(),
-                           path.expand(file_path))
-    file.copy(file.path(current_path, file_name), html_file)
-    rstudioapi::viewer(html_file)
-}
-
-#rstudio_viewer("BostonMap.html", getwd())
-```
-
-
-
-```{r}
 tab = as.data.frame(table(data$age, data$start.station.name))
 colnames(tab) = c("age", "start.station.name", "freq")
 
@@ -825,18 +809,12 @@ data$starttime = round(data$starttime/60,2)
 data$stoptime = round(data$stoptime/60,2)
 
 
-##the normalization function is created
-nor = function(x) { (x -min(x))/(max(x)-min(x))   }
-
-
 data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
-
 
 a = subset(data, age >= 16 & age <30)
 b = subset(data, age >= 30 & age <40)
 c = subset(data, age >= 40 & age <60)
 d = subset(data, age >= 60 & age <=80)
-
 
 
 ##Generate a random number that is 90% of the total number of rows in dataset.
@@ -903,7 +881,7 @@ cat("\nRecall: ", round(recall(tab),2))
 ```
 
 ```{r}
-library(mda)
+
 pr_mixture = mda(age~., data = data_train)
 pr_mixture
 prediciton_mixture = pr_mixture %>% predict(data_test)
@@ -952,7 +930,6 @@ data_train = subset(data_train, select = -c(gender))
 data_test = subset(data_test, select = -c(gender))
 
 
-library(randomForest)
 classifier_RF = randomForest(x = data_train,
                              y = as.factor(labels_train),
                              ntree = 100)
