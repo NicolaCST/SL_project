@@ -28,7 +28,6 @@ Load dataset and remove col that are not useful for our purpose
 
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2019.csv"))
-#tripdata_2019_r = subset(tripdata_2019, select = -c(start.station.name, end.station.name))
 colnames(tripdata_2019_r)
 rm(tripdata_2019)
 
@@ -67,7 +66,6 @@ tripdata_2019_r$stoptime = as.numeric(tripdata_2019_r$stoptime)
 tripdata_2019_r$stoptime = round(tripdata_2019_r$stoptime,0)
 ```
 
-
 ```{r}
 tripdata_2019_r$age = tripdata_2019_r$year - tripdata_2019_r$birth.year
 ```
@@ -76,13 +74,11 @@ tripdata_2019_r$age = tripdata_2019_r$year - tripdata_2019_r$birth.year
 tripdata_2019_r = tripdata_2019_r[tripdata_2019_r$start.station.latitude > 1 & tripdata_2019_r$end.station.latitude >1,]
 ```
 
-
 ```{r}
 #Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
 tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Subscriber"] = 1
 tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Customer"] = 0
 ```
-
 
 ```{r}
 write.csv(tripdata_2019_r, "C:/Users/Utente/Desktop/SL_project/tripdata_2019_r.csv", row.names = FALSE)
@@ -102,17 +98,30 @@ write.csv(tripdata_2019_r, "C:/Users/Utente/Desktop/SL_project/tripdata_2019_r.c
 Repeat the same exact procedure for the dataset of the 2020
 
 ```{r}
+tripdata_2020_r = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2020.csv"))
+tripdata_2020_r = subset(tripdata_2020_r, select = -c(postal.code))
+colnames(tripdata_2020_r)
+rm(tripdata_2020)
 
-tripdata_2020 = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2020.csv"))
-tripdata_2020_r = subset(tripdata_2020, select = -c(usertype, gender, start.station.name, end.station.name))
+# Control the number of trip longer than 1H and shorter than 1m
+nrow(tripdata_2020_r[tripdata_2020_r$tripduration>3600,])
+nrow(tripdata_2020_r[tripdata_2020_r$tripduration<60,])
 
+# Split timestamp in date - time Then split date in y/m/d
 tripdata_2020_r = tidyr::separate(tripdata_2020_r, starttime, c("startdate", "starttime"), sep = " ")
 tripdata_2020_r = tidyr::separate(tripdata_2020_r, startdate, c("syear", "startmonth", "startday"), sep = "-")
+
 tripdata_2020_r = tidyr::separate(tripdata_2020_r, stoptime, c("stopdate", "stoptime"), sep = " ")
 tripdata_2020_r = tidyr::separate(tripdata_2020_r, stopdate, c("stopyear", "stopmonth", "stopday"), sep = "-")
 
+# Remove redundant informations
 tripdata_2020_r = subset(tripdata_2020_r, select = -c(syear, stopyear))
 
+between_month = nrow(tripdata_2020_r[tripdata_2020_r$startmonth != tripdata_2020_r$stopmonth,])
+ratio = round((as.integer(between_month) / as.integer(nrow(tripdata_2020_r))) * 100, 3)
+tripdata_2020_r = subset(tripdata_2020_r, select = -c(stopmonth, startmonth))
+
+# Convert time to sec [starting from midnight]
 tripdata_2020_r$starttime = hms(tripdata_2020_r$starttime)
 tripdata_2020_r$starttime = as.numeric(tripdata_2020_r$starttime)
 tripdata_2020_r$starttime = round(tripdata_2020_r$starttime,0)
@@ -121,21 +130,25 @@ tripdata_2020_r$stoptime = hms(tripdata_2020_r$stoptime)
 tripdata_2020_r$stoptime = as.numeric(tripdata_2020_r$stoptime)
 tripdata_2020_r$stoptime = round(tripdata_2020_r$stoptime,0)
 
-between_month = nrow(tripdata_2020_r[tripdata_2020_r$startmonth != tripdata_2020_r$stopmonth,])
-print("% of trips between months in 2020", ratio = round((as.integer(between_month) / as.integer(nrow(tripdata_2020_r))) * 100, 3)) #0.039%
+tripdata_2020_r$age = tripdata_2020_r$year - tripdata_2020_r$birth.year
+tripdata_2020_r = tripdata_2020_r[tripdata_2020_r$start.station.latitude > 1 & tripdata_2020_r$end.station.latitude >1,]
 
-tripdata_2020_r = subset(tripdata_2020_r, select = -c(stopmonth, startmonth))
+#Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
+tripdata_2020_r$gender[is.na(tripdata_2020_r$gender)] = 0
+tripdata_2020_r$birth.year[is.na(tripdata_2020_r$birth.year)] = 0
 
-colnames(tripdata_2019)
-colnames(tripdata_2020) #Remark: 2020 dataset has PostalCode, while 2019 no
-
-#Remove old dataset to free memory
-rm(tripdata_2019)
-rm(tripdata_2020)
+tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Subscriber"] = 1
+tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Customer"] = 0
 
 
+dic = colnames(tripdata_2019_r)
+ven = colnames(tripdata_2020_r) #Remark: 2020 dataset has PostalCode, while 2019 no
+
+setdiff(dic, ven)
 ```
-
 ```{r}
-tripdata_2020_r$birth.year[is.na(tripdata_2020_r$birth.year)] = ("not_dec")
+write.csv(tripdata_2019_r, "C:/Users/Utente/Desktop/SL_project/tripdata_2020_r.csv", row.names = FALSE)
 ```
+
+
+
