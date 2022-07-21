@@ -1,0 +1,935 @@
+```{r}
+library(lubridate)
+library(rmarkdown)
+library(knitr)
+library(ggplot2)
+library(GGally)
+library(class)
+library(Hmisc)
+library(corrplot)
+library(class)
+library(randomForest)
+library(mda)
+library(klaR)
+```
+
+```{r}
+#loading dataset. Dataset need to be in the same folder of the project.
+load_dataset = function(data_folder, file){
+  PATH = paste(getwd(), data_folder, file, sep="/")
+}
+
+
+##the normalization function is created
+nor = function(x) { (x -min(x))/(max(x)-min(x))   }
+
+
+##this function divides the correct predictions by total number of predictions that tell us how accurate teh model is.
+accuracy = function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+precision = function(x){(diag(x)/((rowSums(x)))) * 100}
+recall = function(x){(diag(x)/((colSums(x)))) * 100}
+
+
+#returns two dataset: train and test
+get_balanced_dataset = function(data, w_gender=0){
+  
+  data$tripduration = round(data$tripduration/60,2)
+  data$starttime = round(data$starttime/60,2)
+  data$stoptime = round(data$stoptime/60,2)
+  
+  data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
+  
+  if (w_gender != 0){
+    a = subset(data, age >= 16 & age < 30 & gender != 0)
+    b = subset(data, age >= 30 & age < 40 & gender != 0)
+    c = subset(data, age >= 40 & age < 60 & gender != 0)
+    d = subset(data, age >= 60 & age <= 80 & gender != 0)
+  }else{
+    a = subset(data, age >= 16 & age < 30)
+    b = subset(data, age >= 30 & age < 40)
+    c = subset(data, age >= 40 & age < 60)
+    d = subset(data, age >= 60 & age <= 80)
+  }
+    
+  
+  ##Generate a random number that is 90% of the total number of rows in dataset.
+  ran = sample(1:nrow(d), 0.9 * nrow(d)) 
+  ##extract training set
+  a_s = a[ran,]
+  b_s = b[ran,]
+  c_s = c[ran,]
+  d_s = d[ran,]
+  
+  
+  ran_test = sample(1:nrow(d), 0.1 * nrow(d)) 
+  ##extract testing set
+  a_t = a[ran_test,]
+  b_t = b[ran_test,]
+  c_t = c[ran_test,]
+  d_t = d[ran_test,]
+  
+  data_train = rbind(a_s, b_s, c_s, d_s)
+  data_test = rbind(a_t, b_t, c_t, d_t)
+  
+  rm(a,b,c,d, a_s, b_s, c_s, d_s, a_t, b_t, c_t, d_t)
+  
+  return(list(data_train, data_test))
+}
+
+# ++++++++++++++++++++++++++++
+# flattenCorrMatrix
+# ++++++++++++++++++++++++++++
+# cormat : matrix of the correlation coefficients
+# pmat : matrix of the correlation p-values
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+
+rstudio_viewer <- function(file_name, file_path = NULL) {
+    temporary_file <- tempfile()
+    dir.create(temporary_file)
+    html_file <- file.path(temporary_file, file_name)
+    current_path <- ifelse(is.null(file_path),
+                           getwd(),
+                           path.expand(file_path))
+    file.copy(file.path(current_path, file_name), html_file)
+    rstudioapi::viewer(html_file)
+}
+
+```
+
+```{r}
+tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+```
+
+```{r}
+par(mfrow=c(1,2))
+
+sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80 & tripdata_2020_r$age > 0,]
+month_20 = table(tripdata_2020_r$month)
+a = as.data.frame(month_20)
+
+
+freq_month_20 = barplot(month_20, 
+     main = "Freq during months",
+     xlab = "Months",
+     ylab = "Freq",
+     col = "light Blue")
+
+
+mean_dur_20 = c()
+
+for (val in 1:12){
+  mean_dur_20[val] =  round(mean(tripdata_2020_r$tripduration[tripdata_2020_r$month == val])/60,2)
+}
+
+min_per_month_20 = barplot(mean_dur_20, 
+     main = "Avg (min) per month",
+     xlab = "Months",
+     ylab = "Mins",
+     ylim=c(0, max(mean_dur_20) + 5),
+     col = "light green",
+     names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
+```
+
+```{r}
+dates <- vector(mode="character", length=nrow(sub_data))
+for (i in 1:nrow(sub_data)){
+  dates[i] = paste(sub_data$year[i], sub_data$month[i], sub_data$startday[i], sep="-")
+}
+dates <- weekdays(as.Date(dates))
+sub_data$dayname = dates
+
+tab = table(sub_data$dayname)
+barplot(tab)
+```
+
+
+```{r}
+cat("min age:", min(tripdata_2020_r$age))
+cat("\nmax age:", max(tripdata_2020_r$age))
+cat("\nusers >80y:", nrow(tripdata_2020_r[tripdata_2020_r$age > 80,]))
+
+par(mfrow=c(1,2))
+
+hist(tripdata_2020_r$age, 
+     breaks = 20,
+     xlab = "Age",
+     main = "Age Histogram 2020")
+
+
+dens = density(tripdata_2020_r$age)
+plot(dens,main = "Age density 2020")
+
+```
+
+```{r}
+boxplot(tripdata_2020_r$age)
+```
+
+```{r}
+X = subset(sub_data, select = c(tripduration, starttime, startday, month, start.station.id, end.station.id))
+
+#our Y
+age_groups = cut(sub_data$age, breaks=c(16, 25, 35, 45, 55, 65, 75, 80), right = FALSE, labels = FALSE)
+```
+
+
+```{r}
+model = lm(age_groups~., data=X)
+summary(model)
+```
+
+it can be seen that p-value of the F-statistic is \< 2.2e-16, which is highly significant. This means that, at least, one of the predictor variables is significantly related to the outcome variable.
+
+the t-statistic evaluates whether or not there is significant association between the predictor and the outcome variable, that is whether the beta coefficient of the predictor is significantly different from zero.
+
+It seems like that the "startday" and "start.station.id" are not significant, thus we can remove them.
+
+```{r}
+model = lm(age_groups~tripduration + starttime + month + end.station.id, data=X)
+summary(model)
+```
+
+R2 represents the proportion of variance, in the outcome variable y, that may be predicted by knowing the value of the x variables. An R2 value close to 1 indicates that the model explains a large portion of the variance in the outcome variable.
+
+A problem with the R2, is that, it will always increase when more variables are added to the model, even if those variables are only weakly associated with the response. A solution is to adjust the R2 by taking into account the number of predictor variables.
+
+The adjustment in the "Adjusted R Square" value in the summary output is a correction for the number of x variables included in the prediction model.
+
+In our case, the adjusted R2 = 0.008, meaning that "0.08% of the variance in the measure can be predicted by starttime and month"
+
+The RSE estimate gives a measure of error of prediction. The lower the RSE, the more accurate the model. The error rate can be estimated by dividing the RSE by the mean outcome variable:
+
+Test with best subset
+
+```{r}
+sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
+#our Y
+age_groups = cut(sub_data$age, breaks=c(16, 25, 35, 45, 55, 65, 75, 80), right = FALSE, labels = FALSE)
+
+#questo sembra essere il subset migliore
+model = lm(age_groups~. -year -birth.year -age -startday -end.station.id -stopday -start.station.id -bikeid -tripduration, data=sub_data)
+summary(model)
+```
+
+```{r}
+#confidence intervals
+confint(model)
+```
+
+I mean, siamo passati dallo spiegare lo 0.08% della varianza al 2.4%, ma non so se sia la strada giusta
+
+```{r}
+mod = augment(model)
+
+qqnorm(mod$.resid)
+qqline(mod$.resid)
+```
+
+```{r}
+plot(fitted(model), residuals(model), col="gray40", xlab="fitted values", ylab="residuals")
+lines(loess.smooth(fitted(model), residuals(model)), col="blue", lwd=2)
+```
+
+```{r}
+ggpairs(X)
+```
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+```{r}
+sub_data = subset(sub_data, select = -c(year, birth.year, start.station.name, end.station.name))
+round(var(sub_data),2)
+res2<-rcorr(as.matrix(sub_data))
+a = as.data.frame(flattenCorrMatrix(res2$r, res2$P))
+```
+
+```{r}
+corrplot(cor(sub_data), type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+```
+
+```{r}
+par(mfrow=c(1,2))
+plot(sub_data$start.station.longitude, sub_data$end.station.longitude)
+plot(sub_data$start.station.latitude, sub_data$end.station.latitude)
+
+```
+
+```{r}
+plot(round(sub_data$starttime/3600,2), round(sub_data$stoptime/3600,2))
+```
+
+Remark: Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
+
+EDA on gender and customer type
+
+```{r}
+
+tab = table(sub_data$gender, sub_data$usertype)
+hist = barplot(tab, 
+        beside = TRUE, 
+        legend = FALSE,
+        main = "Gender and UserType",
+        xlab = "UserType",
+        ylab = "Freq",
+        ylim=c(0, max(tab) + 100000),
+        names.arg = c("Customer: 0", "Subscriber: 1"),
+        col = heat.colors(3))
+
+legend("topleft", legend = c("Unknown", "Male", "Female"),
+       fill = heat.colors(3))
+
+text(x = hist, y = tab + 50000, labels = tab, cex = .8)
+
+
+```
+
+EDA userType / tripduration
+
+```{r}
+EDA_UT = subset(sub_data, select = c(tripduration, usertype))
+
+customer_dur = EDA_UT[EDA_UT$usertype == 0,]
+customer_dur = subset(customer_dur, select = -c(usertype))
+
+subscriber_dur = EDA_UT[EDA_UT$usertype == 1,]
+subscriber_dur = subset(subscriber_dur, select = -c(usertype))
+
+par(mfrow=c(1,2))
+
+plot(density(log(customer_dur$tripduration)), main="log customer trip duration")
+plot(density(log(subscriber_dur$tripduration)), main="log subscriber trip duration")
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+hist(labels_train, probability = TRUE)
+plot(density(tripdata_2020_r$age[tripdata_2020_r$age <= 80]), main = "Distribution of ages")
+```
+
+```{r}
+tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
+rm(tripdata_2020_r)
+
+data = subset(sub_data, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    start.station.name,  
+                                    start.station.id, 
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.name,
+                                    end.station.id,
+                                    end.station.latitude, 
+                                    end.station.longitude))
+
+
+
+data$tripduration = round(data$tripduration/60,2)
+data$starttime = round(data$starttime/60,2)
+data$stoptime = round(data$stoptime/60,2)
+
+data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
+
+
+##Generate a random number that is 90% of the total number of rows in dataset.
+ran = sample(1:nrow(data), 0.2 * nrow(data)) 
+##extract training set
+data_train = data[ran,] 
+
+ran_test = sample(1:nrow(data_train), 0.05 * nrow(data_train)) 
+##extract testing set
+data_test = data_train[ran_test,] 
+
+#our Y
+labels_train = cut(data_train$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
+labels_test = cut(data_test$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
+
+
+data_train = subset(data_train, select = -c(age, gender))
+data_test = subset(data_test, select = -c(age, gender))
+
+
+##run knn function
+pr = knn(data_train, data_test, cl=labels_train, k=10)
+
+##create confusion matrix
+tab = table(pr, labels_test)
+
+
+cat("Accuracy: ", round(accuracy(tab),2))
+cat("\nPrecision: ", round(precision(tab),2))
+cat("\nRecall: ", round(recall(tab),2))
+
+```
+
+```{r}
+tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+unknown = tripdata_2020_r[tripdata_2020_r$age > 80,]
+
+un_data = subset(unknown, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    start.station.name,
+                                    start.station.id, 
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.name,
+                                    end.station.id, 
+                                    end.station.latitude, 
+                                    end.station.longitude,
+                                    age,
+                                    gender))
+
+
+
+un_data$tripduration = round(un_data$tripduration/60,2)
+un_data$starttime = round(un_data$starttime/60,2)
+un_data$stoptime = round(un_data$stoptime/60,2)
+
+un_data[c("tripduration", "starttime", "stoptime")] = lapply(un_data[c("tripduration", "starttime", "stoptime")], nor)
+
+
+##run knn function
+pr_un_data = knn(data_train, un_data, cl=labels_train, k=10)
+```
+
+```{r}
+old_method = pr_un_data
+table(old_method)
+```
+
+```{r}
+new_method = pr_un_data
+table(new_method)
+```
+
+```{r}
+tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
+rm(tripdata_2020_r)
+
+data = subset(sub_data, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    #end.station.id,  
+                                    #start.station.id, 
+                                    start.station.name,
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.name,
+                                    end.station.latitude, 
+                                    end.station.longitude))
+
+
+full = get_balanced_dataset(data, w_gender = 0)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+#our Y
+labels_train = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+labels_test = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+
+data_train = subset(data_train, select = -c(age, gender))
+data_test = subset(data_test, select = -c(age, gender)) #gender? perchè lo togliamo?
+
+
+##run knn function
+pr = knn(data_train, data_test, cl=labels_train, k=10)
+
+##create confusion matrix
+tab = table(pr, labels_test)
+
+cat("Accuracy: ", round(accuracy(tab),2))
+cat("\nPrecision: ", round(precision(tab),2))
+cat("\nRecall: ", round(recall(tab),2))
+
+```
+
+```{r}
+# Fit the model
+model = nnet::multinom(labels_train ~., data = data_train)
+```
+
+```{r}
+# Make predictions
+predicted.classes = model %>% predict(data_test)
+# Model accuracy
+mean(predicted.classes == labels_test)
+```
+
+```{r}
+classifier_RF = randomForest(x = data_train,
+                             y = as.factor(labels_train),
+                             ntree = 100)
+```
+
+```{r}
+# Predicting the Test set results
+y_pred = predict(classifier_RF, newdata = data_test)
+  
+# Confusion Matrix
+confusion_mtx = table(y_pred, labels_test)
+confusion_mtx
+```
+
+```{r}
+# Plotting model
+plot(classifier_RF)
+  
+# Importance plot
+importance(classifier_RF)
+  
+# Variable importance plot
+varImpPlot(classifier_RF)
+```
+
+```{r}
+cat("Accuracy: ", round(accuracy(confusion_mtx),2))
+cat("\nPrecision: ", round(precision(confusion_mtx),2))
+cat("\nRecall: ", round(recall(confusion_mtx),2))
+```
+
+```{r}
+rocs = multiclass.roc(as.numeric(labels_test), as.numeric(y_pred))
+rs = rocs[["rocs"]]
+plot.roc(rs[[1]])
+sapply(2:length(rs),function(i) lines.roc(rs[[i]],col=i))
+```
+
+```{r}
+data$age = cut(data$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
+```
+
+```{r}
+our_palette = c(rgb(1, 0, 0), 
+              rgb(0, 1, 0), 
+              rgb(0, 0, 1), 
+              rgb(1, 0.5, 0))
+
+c1 = density(data[data$age==1,]$month, adjust = 3.5)
+c2 = density(data[data$age==2,]$month, adjust = 3.5)
+c3 = density(data[data$age==3,]$month, adjust = 3.5)
+c4 = density(data[data$age==4,]$month, adjust = 3.5)
+
+plot(c1, xlim = c(1,12), main = "Age density over months", col = our_palette[1], lwd = 2)
+lines(c2, col = our_palette[2], lwd = 2)
+lines(c3, col = our_palette[3], lwd = 2)
+lines(c4, col = our_palette[4], lwd = 2)
+
+
+legend("topleft", 
+       legend = c("16-29", "30-39", "40-59", "60-80"),
+       fill = our_palette)
+```
+
+
+```{r}
+data = subset(sub_data, select = c(age,
+                                  start.station.name,
+                                  start.station.latitude, 
+                                  start.station.longitude,
+                                  end.station.name,
+                                  end.station.latitude, 
+                                  end.station.longitude))
+
+
+data$age = cut(data$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
+
+
+EDA_id_station = subset(data, select = c(start.station.name,
+                                         end.station.name,
+                                         age))
+
+# TOP 10 START #
+tab = as.data.frame(table(EDA_id_station$start.station.name))
+top_10_start = tab[order(tab$Freq, decreasing = T),][1:10,]
+colnames(top_10_start) = c("start_name", "Freq")
+
+start_tab = data.frame(matrix(NA, nrow = nrow(top_10_start), ncol = 4))
+colnames(start_tab) = c("1","2", "3", "4")
+
+for (rowIdx in 1:(nrow(start_tab))) {
+  for (colIdx in 1:(ncol(start_tab))) {
+    start_tab[rowIdx, colIdx] = nrow(subset(EDA_id_station, age == colIdx & start.station.name == top_10_start[rowIdx,1]))
+  }
+}
+
+start_tab$start_name = top_10_start$start_name
+
+
+
+# TOP 10 END #
+end_tab = as.data.frame(table(EDA_id_station$end.station.name))
+top_10_end = tab[order(end_tab$Freq, decreasing = T),][1:10,]
+colnames(top_10_end) = c("end_name", "Freq")
+
+end_tab = data.frame(matrix(NA, nrow = nrow(top_10_end), ncol = 4))
+colnames(end_tab) = c("1","2", "3", "4")
+
+for (rowIdx in 1:(nrow(end_tab))) {
+  for (colIdx in 1:(ncol(end_tab))) {
+    end_tab[rowIdx, colIdx] = nrow(subset(EDA_id_station, age == colIdx & end.station.name == top_10_end[rowIdx,1]))
+  }
+}
+
+end_tab$end_name = top_10_end$end_name
+
+```
+
+
+```{r}
+bar = barplot(as.matrix(subset(start_tab, select = -c(start_name))), 
+        beside = T,
+        cex.names = 1,
+        horiz = T,
+        las=1,
+        main = "TOP-10 Most used start station by age",
+        space = c(0,3),
+        col = heat.colors(nrow(start_tab)))
+
+legend("topright", legend = start_tab$start_name,
+       fill = heat.colors(nrow(start_tab)), cex = 0.8)
+
+
+bar = barplot(as.matrix(subset(end_tab, select = -c(end_name))), 
+        beside = T,
+        cex.names = 1,
+        horiz = T,
+        las=1,
+        main = "TOP-10 Most used end station by age",
+        space = c(0,3),
+        col = heat.colors(nrow(start_tab)))
+
+legend("topright", legend = end_tab$end_name,
+       fill = heat.colors(nrow(end_tab)), cex = 0.8)
+
+```
+
+
+```{r}
+tab = as.data.frame(table(data$age, data$start.station.name, data$start.station.latitude))
+temp = order(colSums(tab), decreasing = T) #da errore 
+temp = as.data.frame(tab[,temp[1:10],])
+
+par(mar=c(4,16,4,0))
+barplot(temp,
+        beside=TRUE,
+        col = c("darkgrey", "darkblue", "red", "yellow"),
+        las=1,
+        cex.axis = 1,
+        horiz = TRUE
+        )
+```
+
+
+```{r}
+temp$start.station.name[1]
+```
+
+```{r}
+map_start = subset(sub_data, select = c(start.station.name,
+                                  start.station.latitude, 
+                                  start.station.longitude))
+map_start = map_start[!duplicated(map_start[ , c("start.station.name")]),]
+map_start = map_start[map_start$start.station.name %in% start_tab$start_name,]
+
+
+map_end = subset(sub_data, select = c(end.station.name,
+                                  end.station.latitude, 
+                                  end.station.longitude))
+map_end = map_end[!duplicated(map_end[ , c("end.station.name")]),]
+map_end = map_end[map_end$end.station.name %in% end_tab$end_name,]
+
+
+
+pos_20 = cbind(map_start, 
+               end.station.name = map_end$end.station.name,
+               end.station.latitude = map_end$end.station.latitude,
+               end.station.longitude = map_end$end.station.longitude)
+
+write.csv(pos_20, paste(getwd(), "SL_dataset/2020_pos.csv", sep = "/"), row.names = FALSE)
+```
+
+
+```{python}
+import pandas as pd
+import numpy as np
+import folium
+import webbrowser
+
+df_acc = pd.read_csv('C:/Users/Utente/Desktop/SL_project/SL_dataset/2020_pos.csv', dtype=object)
+
+map_hooray = folium.Map(location=[42.361145, -71.057083], zoom_start = 12) 
+
+df_acc['start.station.name'] = df_acc['start.station.name'].astype(str)
+df_acc['start.station.latitude'] = df_acc['start.station.latitude'].astype(float)
+df_acc['start.station.longitude'] = df_acc['start.station.longitude'].astype(float)
+
+
+feature_group = folium.FeatureGroup("LocationsStart")
+lat = df_acc['start.station.latitude']
+lng = df_acc['start.station.longitude']
+name = df_acc['start.station.name']
+
+for lt, lg, nm in zip(lat, lng, name):
+    feature_group.add_child(folium.Marker(location=[lt,lg],popup=nm,icon=folium.Icon(color="blue")))
+
+map_hooray.add_child(feature_group)
+
+map_hooray.save("BostonMap.html")
+```
+
+
+```{r}
+tab = as.data.frame(table(data$age, data$start.station.name))
+colnames(tab) = c("age", "start.station.name", "freq")
+
+
+one = tab[tab$age == 1,]
+temp = one[order(one$freq, decreasing = T),][1:10,]
+
+two = tab[tab$age == 2,]
+temp = rbind(temp, (two[order(two$freq, decreasing = T),][1:10,]))
+
+three = tab[tab$age == 3,]
+temp = rbind(temp, (three[order(three$freq, decreasing = T),][1:10,]))
+
+four = tab[tab$age == 4,]
+temp = rbind(temp, (four[order(four$freq, decreasing = T),][1:10,]))
+
+temp$lat = NA
+temp$long = NA
+
+for (idx in 1:nrow(temp)){
+  name = temp$start.station.name[idx]
+  
+  temp[idx, 4] = data$start.station.latitude[data$start.station.name == name][1]
+  temp[idx, 5] = data$start.station.longitude[data$start.station.name == name]
+}
+
+
+write.csv(temp, paste(getwd(), "SL_dataset/start_station_by_age_20.csv", sep = "/"), row.names = FALSE)
+```
+
+
+```{python}
+df_acc = pd.read_csv('C:/Users/Utente/Desktop/SL_project/SL_dataset/start_station_by_age_20.csv', dtype=object)
+
+df_acc['start.station.name'] = df_acc['start.station.name'].astype(str)
+df_acc['age'] = df_acc['age'].astype(int)
+df_acc['freq'] = df_acc['freq'].astype(int)
+df_acc['lat'] = df_acc['lat'].astype(float)
+df_acc['long'] = df_acc['long'].astype(float)
+
+
+for i in range(1,5):
+  map_hooray = folium.Map(location=[42.361145, -71.057083], zoom_start = 12) 
+  feature = "LocationsStart_" + str(i)
+  
+  
+  fil = df_acc[df_acc['age'] == i]
+  feature_group = folium.FeatureGroup(feature)
+  lat = fil['lat']
+  lng = fil['long']
+  name = fil['start.station.name']
+  
+  
+  for lt, lg, nm in zip(lat, lng, name):
+      feature_group.add_child(folium.Marker(location=[lt,lg],popup=nm,icon=folium.Icon(color="blue")))
+  
+  
+  map_hooray.add_child(feature_group)
+  map_hooray.save("BostonMap_age" + str(i) + ".html")
+
+```
+
+```{r}
+rstudio_viewer("BostonMap_age1.html", getwd())
+```
+
+
+```{r}
+tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
+rm(tripdata_2020_r)
+
+data = subset(sub_data, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    #end.station.id,  
+                                    #start.station.id, 
+                                    start.station.name,
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.name,
+                                    end.station.latitude, 
+                                    end.station.longitude))
+
+
+full = get_balanced_dataset(data, w_gender = 0)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+#our Y
+labels_train = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+labels_test = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+
+data_train$age = labels_train
+data_test$age = labels_test
+
+pr_linear = lda(age~., data = data_train)
+prediciton = pr_linear %>% predict(data_test)
+
+##create confusion matrix
+tab = table(prediciton$class, labels_test)
+
+cat("Accuracy: ", round(accuracy(tab),2))
+cat("\nPrecision: ", round(precision(tab),2))
+cat("\nRecall: ", round(recall(tab),2))
+
+pr_linear
+```
+
+```{r}
+pr_quadratic = qda(age~., data = data_train)
+prediciton_quadratic = pr_quadratic %>% predict(data_test)
+
+tab = table(prediciton_quadratic$class, labels_test)
+
+cat("Accuracy: ", round(accuracy(tab),2))
+cat("\nPrecision: ", round(precision(tab),2))
+cat("\nRecall: ", round(recall(tab),2))
+```
+
+```{r}
+
+pr_mixture = mda(age~., data = data_train)
+pr_mixture
+prediciton_mixture = pr_mixture %>% predict(data_test)
+
+tab = table(prediciton_mixture, labels_test)
+
+cat("Accuracy: ", round(accuracy(tab),2))
+cat("\nPrecision: ", round(precision(tab),2))
+cat("\nRecall: ", round(recall(tab),2))
+```
+
+
+#ASSUMING GENDER
+```{r}
+tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
+rm(tripdata_2020_r)
+
+data = subset(sub_data, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    #end.station.id,  
+                                    #start.station.id, 
+                                    start.station.name,
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.name,
+                                    end.station.latitude, 
+                                    end.station.longitude))
+
+
+
+full = get_balanced_dataset(data, w_gender = 1)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+
+data_train$age = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+data_test$age = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+
+labels_train = data_train$gender
+labels_test = data_test$gender
+
+data_train = subset(data_train, select = -c(gender))
+data_test = subset(data_test, select = -c(gender))
+
+
+classifier_RF = randomForest(x = data_train,
+                             y = as.factor(labels_train),
+                             ntree = 100)
+
+
+# Predicting the Test set results
+y_pred = predict(classifier_RF, newdata = data_test)
+  
+# Confusion Matrix
+confusion_mtx = table(y_pred, labels_test)
+confusion_mtx
+
+# Plotting model
+plot(classifier_RF)
+  
+# Importance plot
+importance(classifier_RF)
+  
+# Variable importance plot
+varImpPlot(classifier_RF)
+
+cat("Accuracy: ", round(accuracy(confusion_mtx),2))
+cat("\nPrecision: ", round(precision(confusion_mtx),2))
+cat("\nRecall: ", round(recall(confusion_mtx),2))
+```
+
+```{r}
+tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
+rm(tripdata_2020_r)
+
+data = subset(sub_data, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    #end.station.id,  
+                                    #start.station.id, 
+                                    start.station.name,
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.name,
+                                    end.station.latitude, 
+                                    end.station.longitude))
+
+
+full = get_balanced_dataset(data, w_gender = 1)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+data_train$age = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+data_test$age = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+
+pr_linear =  qda(gender~., data = data_train)
+prediciton = pr_linear %>% predict(data_test)
+
+##create confusion matrix
+tab = table(prediciton$class, data_test$gender)
+
+cat("Accuracy: ", round(accuracy(tab),2))
+cat("\nPrecision: ", round(precision(tab),2))
+cat("\nRecall: ", round(recall(tab),2))
+```
+
+
+
+
