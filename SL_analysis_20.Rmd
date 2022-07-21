@@ -103,16 +103,95 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
     rstudioapi::viewer(html_file)
 }
 
+
 ```
 
 ```{r}
 tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
 ```
 
+
+```{r}
+sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
+data = subset(sub_data, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    #end.station.id,  
+                                    #start.station.id, 
+                                    start.station.name,
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.name,
+                                    end.station.latitude, 
+                                    end.station.longitude))
+
+
+full = get_balanced_dataset(data, w_gender = 0)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+#our Y
+labels_train = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+labels_test = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+
+data_train = subset(data_train, select = -c(age, gender))
+data_test = subset(data_test, select = -c(age, gender)) #gender? perchè lo togliamo?
+
+classifier_RF = randomForest(x = data_train,
+                             y = as.factor(labels_train),
+                             ntree = 100)
+
+# Predicting the Test set results
+y_pred = predict(classifier_RF, newdata = data_test)
+  
+# Confusion Matrix
+confusion_mtx = table(y_pred, labels_test)
+confusion_mtx
+
+cat("Accuracy: ", round(accuracy(confusion_mtx),2))
+cat("\nPrecision: ", round(precision(confusion_mtx),2))
+cat("\nRecall: ", round(recall(confusion_mtx),2))
+
+#96.66 acc avg. >93% acc on each class
+```
+
+
+#Let's try to predict the 0-age 
+```{r}
+discover = subset(sub_data, select = -c(year, 
+                                        birth.year, 
+                                        #startday, 
+                                        stopday,
+                                        #end.station.id,  
+                                        #start.station.id, 
+                                        start.station.name,
+                                        start.station.latitude, 
+                                        start.station.longitude, 
+                                        end.station.name,
+                                        end.station.latitude, 
+                                        end.station.longitude,
+                                        gender))
+
+discover = discover[discover$age == 0,]
+discover = subset(discover, select = -c(age))
+
+
+# Predicting the Test set results
+dec_age = predict(classifier_RF, newdata = discover)
+```
+
+```{r}
+table(as.data.frame(dec_age))
+```
+
+
+
+
 ```{r}
 par(mfrow=c(1,2))
 
-sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80 & tripdata_2020_r$age > 0,]
+sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
 month_20 = table(tripdata_2020_r$month)
 a = as.data.frame(month_20)
 
@@ -139,6 +218,7 @@ min_per_month_20 = barplot(mean_dur_20,
      names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
 ```
 
+
 ```{r}
 dates <- vector(mode="character", length=nrow(sub_data))
 for (i in 1:nrow(sub_data)){
@@ -156,8 +236,10 @@ barplot(tab)
 cat("min age:", min(tripdata_2020_r$age))
 cat("\nmax age:", max(tripdata_2020_r$age))
 cat("\nusers >80y:", nrow(tripdata_2020_r[tripdata_2020_r$age > 80,]))
+cat("\nusers = 0y:", nrow(tripdata_2020_r[tripdata_2020_r$age == 0,]))
 
 par(mfrow=c(1,2))
+
 
 hist(tripdata_2020_r$age, 
      breaks = 20,
@@ -169,7 +251,6 @@ dens = density(tripdata_2020_r$age)
 plot(dens,main = "Age density 2020")
 
 ```
-
 ```{r}
 boxplot(tripdata_2020_r$age)
 ```

@@ -99,7 +99,6 @@ Repeat the same exact procedure for the dataset of the 2020
 
 ```{r}
 tripdata_2020_r = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2020.csv"))
-
 dec_2020 = read.csv(load_dataset("SL_dataset", "2020_12.csv"))
 
 a = colnames(tripdata_2020_r)
@@ -116,7 +115,6 @@ tripdata_2020_r = rbind(tripdata_2020_r, dec_2020)
 
 tripdata_2020_r = subset(tripdata_2020_r, select = -c(postal.code))
 colnames(tripdata_2020_r)
-rm(tripdata_2020)
 
 # Control the number of trip longer than 1H and shorter than 1m
 nrow(tripdata_2020_r[tripdata_2020_r$tripduration>3600,])
