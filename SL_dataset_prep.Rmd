@@ -99,6 +99,21 @@ Repeat the same exact procedure for the dataset of the 2020
 
 ```{r}
 tripdata_2020_r = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2020.csv"))
+
+dec_2020 = read.csv(load_dataset("SL_dataset", "2020_12.csv"))
+
+a = colnames(tripdata_2020_r)
+b = colnames(dec_2020)
+setdiff(a,b)
+
+dec_2020$year = 2020
+dec_2020$month = 12
+dec_2020$birth.year = 0
+dec_2020$gender = 0
+
+tripdata_2020_r = rbind(tripdata_2020_r, dec_2020)
+
+
 tripdata_2020_r = subset(tripdata_2020_r, select = -c(postal.code))
 colnames(tripdata_2020_r)
 rm(tripdata_2020)
@@ -130,24 +145,21 @@ tripdata_2020_r$stoptime = hms(tripdata_2020_r$stoptime)
 tripdata_2020_r$stoptime = as.numeric(tripdata_2020_r$stoptime)
 tripdata_2020_r$stoptime = round(tripdata_2020_r$stoptime,0)
 
-tripdata_2020_r$age = tripdata_2020_r$year - tripdata_2020_r$birth.year
-tripdata_2020_r = tripdata_2020_r[tripdata_2020_r$start.station.latitude > 1 & tripdata_2020_r$end.station.latitude >1,]
-
 #Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
 tripdata_2020_r$gender[is.na(tripdata_2020_r$gender)] = 0
 tripdata_2020_r$birth.year[is.na(tripdata_2020_r$birth.year)] = 0
 
-tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Subscriber"] = 1
-tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Customer"] = 0
+tripdata_2020_r$age = tripdata_2020_r$year - tripdata_2020_r$birth.year
+tripdata_2020_r$age[tripdata_2020_r$age == 2020] = 0
+tripdata_2020_r = tripdata_2020_r[tripdata_2020_r$start.station.latitude > 1 & tripdata_2020_r$end.station.latitude >1,]
 
+tripdata_2020_r$usertype[tripdata_2020_r$usertype == "Subscriber"] = 1
+tripdata_2020_r$usertype[tripdata_2020_r$usertype == "Customer"] = 0
 
-dic = colnames(tripdata_2019_r)
-ven = colnames(tripdata_2020_r) #Remark: 2020 dataset has PostalCode, while 2019 no
-
-setdiff(dic, ven)
 ```
+
 ```{r}
-write.csv(tripdata_2019_r, "C:/Users/Utente/Desktop/SL_project/tripdata_2020_r.csv", row.names = FALSE)
+write.csv(tripdata_2020_r, "C:/Users/Utente/Desktop/SL_project/tripdata_2020_r.csv", row.names = FALSE)
 ```
 
 
