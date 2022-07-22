@@ -108,6 +108,11 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
 
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
+test_data = tripdata_2019_r[tripdata_2019_r$age>80,]
+
+split_ages = c(16, 25, 35, 45, 55, 65, 75, 80)
+sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
+sub_data$age_groups = cut(sub_data$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
 ```
 
 
@@ -123,12 +128,6 @@ print(results)
 predictors(results)
 
 plot(results, type=c("g","o"))
-```
-
-```{r}
-split_ages = c(16, 25, 35, 45, 55, 65, 75, 80)
-sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
-sub_data$age_groups = cut(sub_data$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
 ```
 
 ```{r}
@@ -848,9 +847,8 @@ cat("\nRecall: ", round(recall(tab),2))
 
 #ASSUMING GENDER
 ```{r}
-tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
-sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
-rm(tripdata_2019_r)
+#tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
+#sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
 
 data = subset(sub_data, select = -c(year, 
                                     birth.year, 
@@ -905,9 +903,6 @@ cat("\nPrecision: ", round(precision(confusion_mtx),2))
 cat("\nRecall: ", round(recall(confusion_mtx),2))
 ```
 
-
-
-
 ```{r}
 pred_dataset = subset(sub_data, select = -c(year, 
                                     birth.year, 
@@ -956,18 +951,9 @@ text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
 
 
-
-
-
-
-
-
-
-
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
-rm(tripdata_2019_r)
 
 data = subset(sub_data, select = -c(year, 
                                     birth.year, 
@@ -987,20 +973,98 @@ full = get_balanced_dataset(data, w_gender = 1)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
-data_train$age = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
-data_test$age = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
-
 pr_linear =  qda(gender~., data = data_train)
 prediciton = pr_linear %>% predict(data_test)
 
 ##create confusion matrix
 tab = table(prediciton$class, data_test$gender)
+tab
 
 cat("Accuracy: ", round(accuracy(tab),2))
 cat("\nPrecision: ", round(precision(tab),2))
 cat("\nRecall: ", round(recall(tab),2))
 ```
 
+
+#AGE PREDICTER
+```{r}
+data = subset(sub_data, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    #end.station.id,  
+                                    #start.station.id, 
+                                    start.station.name,
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.name,
+                                    end.station.latitude, 
+                                    end.station.longitude,
+                                    age))
+
+
+
+full = get_balanced_dataset(data, w_gender = 1)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+labels_train = data_train$age_groups
+labels_test = data_test$age_groups
+
+data_train = subset(data_train, select = -c(age_groups))
+data_test = subset(data_test, select = -c(age_groups))
+
+
+classifier_RF = randomForest(x = data_train,
+                             y = as.factor(labels_train),
+                             ntree = 100)
+
+
+# Predicting the Test set results
+y_pred = predict(classifier_RF, newdata = data_test)
+  
+# Confusion Matrix
+confusion_mtx = table(y_pred, labels_test)
+confusion_mtx
+
+# Plotting model
+plot(classifier_RF)
+  
+# Importance plot
+importance(classifier_RF)
+  
+# Variable importance plot
+varImpPlot(classifier_RF)
+
+cat("Accuracy: ", round(accuracy(confusion_mtx),2))
+cat("\nPrecision: ", round(precision(confusion_mtx),2))
+cat("\nRecall: ", round(recall(confusion_mtx),2))
+```
+
+```{r}
+pred_dataset_age = tripdata_2019_r[tripdata_2019_r$age >= 90,]
+
+pred_dataset_age = subset(pred_dataset_age, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    #end.station.id,  
+                                    #start.station.id, 
+                                    start.station.name,
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.name,
+                                    end.station.latitude, 
+                                    end.station.longitude,
+                                    age))
+
+y_age_groups = predict(classifier_RF, newdata = pred_dataset_age)
+
+pred_dataset_age$age_groups = y_age_groups
+table(y_age_groups)
+
+
+```
 
 
 
