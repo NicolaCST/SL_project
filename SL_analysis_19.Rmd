@@ -41,15 +41,15 @@ get_balanced_dataset = function(data, w_gender=0){
   data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
   
   if (w_gender != 0){
-    a = subset(data, age >= 16 & age < 30 & gender != 0)
-    b = subset(data, age >= 30 & age < 40 & gender != 0)
-    c = subset(data, age >= 40 & age < 60 & gender != 0)
-    d = subset(data, age >= 60 & age <= 80 & gender != 0)
+    a = subset(data, (age_groups == 1 | age_groups == 2) & gender != 0)
+    b = subset(data, (age_groups == 3 | age_groups == 4) & gender != 0)
+    c = subset(data, (age_groups == 5 | age_groups == 6) & gender != 0)
+    d = subset(data, (age_groups == 7) & gender != 0)
   }else{
-    a = subset(data, age >= 16 & age < 30)
-    b = subset(data, age >= 30 & age < 40)
-    c = subset(data, age >= 40 & age < 60)
-    d = subset(data, age >= 60 & age <= 80)
+    a = subset(data, (age_groups == 1 | age_groups == 2))
+    b = subset(data, (age_groups == 3 | age_groups == 4))
+    c = subset(data, (age_groups == 5 | age_groups == 6))
+    d = subset(data, (age_groups == 7))
   }
     
   
@@ -109,15 +109,30 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 ```
+
+
 ```{r}
-boxplot(tripdata_2019_r$age)
+library(caret)
+
+sub_data = subset(tripdata_2019_r, select = -c(year, birth.year, start.station.name, end.station.name))
+
+control = rfeControl(functions = rfFuncs, method="cv", number=10)
+results = rfe(sub_data[1:500000,1:15], sub_data[1:500000,16], rfeControl = control)
+
+print(results)
+predictors(results)
+
+plot(results, type=c("g","o"))
+```
+
+```{r}
+split_ages = c(16, 25, 35, 45, 55, 65, 75, 80)
+sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
+sub_data$age_groups = cut(sub_data$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
 ```
 
 ```{r}
 par(mfrow=c(1,2))
-
-sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
-sub_data$age_groups = cut(sub_data$age, breaks=c(16, 25, 35, 45, 55, 65, 75, 80), include.lowest = TRUE, labels = FALSE)
 
 month_19 = table(sub_data$month)
 
@@ -141,6 +156,10 @@ min_per_month_19 = barplot(mean_dur_19,
      ylim=c(0, max(mean_dur_19) + 5),
      col = "light green",
      names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
+```
+
+```{r}
+boxplot(tripdata_2019_r$age)
 ```
 
 ```{r}
@@ -844,17 +863,14 @@ data = subset(sub_data, select = -c(year,
                                     start.station.longitude, 
                                     end.station.name,
                                     end.station.latitude, 
-                                    end.station.longitude))
+                                    end.station.longitude,
+                                    age))
 
 
 
 full = get_balanced_dataset(data, w_gender = 1)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
-
-
-data_train$age = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
-data_test$age = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
 
 labels_train = data_train$gender
 labels_test = data_test$gender
@@ -888,6 +904,65 @@ cat("Accuracy: ", round(accuracy(confusion_mtx),2))
 cat("\nPrecision: ", round(precision(confusion_mtx),2))
 cat("\nRecall: ", round(recall(confusion_mtx),2))
 ```
+
+
+
+
+```{r}
+pred_dataset = subset(sub_data, select = -c(year, 
+                                    birth.year, 
+                                    #startday, 
+                                    stopday,
+                                    #end.station.id,  
+                                    #start.station.id, 
+                                    start.station.name,
+                                    start.station.latitude, 
+                                    start.station.longitude, 
+                                    end.station.name,
+                                    end.station.latitude, 
+                                    end.station.longitude,
+                                    age))
+
+
+
+pred_dataset = pred_dataset[pred_dataset$gender == 0,]
+y_gender = predict(classifier_RF, newdata = pred_dataset[,-9])
+
+pred_dataset$gender = y_gender
+table(y_gender)
+
+
+sub_data$gender[sub_data$gender == 0] = y_gender
+
+
+
+
+tab = table(sub_data$gender, sub_data$usertype)
+hist = barplot(tab, 
+        beside = TRUE, 
+        legend = FALSE,
+        main = "Gender and UserType",
+        xlab = "UserType",
+        ylab = "Freq",
+        ylim=c(0, max(tab) + 100000),
+        names.arg = c("Customer: 0", "Subscriber: 1"),
+        col = heat.colors(2))
+
+legend("topleft", legend = c("Male", "Female"),
+       fill = heat.colors(2))
+
+text(x = hist, y = tab + 50000, labels = tab, cex = .8)
+```
+
+
+
+
+
+
+
+
+
+
 
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
