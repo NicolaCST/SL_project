@@ -108,7 +108,6 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
 
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
-test_data = tripdata_2019_r[tripdata_2019_r$age>80,]
 
 split_ages = c(16, 25, 35, 45, 55, 65, 75, 80)
 sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
@@ -995,11 +994,11 @@ data = subset(sub_data, select = -c(year,
                                     #end.station.id,  
                                     #start.station.id, 
                                     start.station.name,
-                                    start.station.latitude, 
-                                    start.station.longitude, 
+                                    #start.station.latitude, 
+                                    #start.station.longitude, 
                                     end.station.name,
-                                    end.station.latitude, 
-                                    end.station.longitude,
+                                    #end.station.latitude, 
+                                    #end.station.longitude,
                                     age))
 
 
@@ -1045,24 +1044,48 @@ cat("\nRecall: ", round(recall(confusion_mtx),2))
 pred_dataset_age = tripdata_2019_r[tripdata_2019_r$age >= 90,]
 
 pred_dataset_age = subset(pred_dataset_age, select = -c(year, 
-                                    birth.year, 
-                                    #startday, 
-                                    stopday,
-                                    #end.station.id,  
-                                    #start.station.id, 
-                                    start.station.name,
-                                    start.station.latitude, 
-                                    start.station.longitude, 
-                                    end.station.name,
-                                    end.station.latitude, 
-                                    end.station.longitude,
-                                    age))
+                                                        birth.year, 
+                                                        #startday, 
+                                                        stopday,
+                                                        #end.station.id,  
+                                                        #start.station.id, 
+                                                        start.station.name,
+                                                        #start.station.latitude, 
+                                                        #start.station.longitude, 
+                                                        end.station.name,
+                                                        #end.station.latitude, 
+                                                        #end.station.longitude,
+                                                        age))
 
 y_age_groups = predict(classifier_RF, newdata = pred_dataset_age)
 
 pred_dataset_age$age_groups = y_age_groups
 table(y_age_groups)
 
+
+```
+```{r}
+full = get_balanced_dataset(data, w_gender = 1)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+labels_train = data_train$age_groups
+labels_test = data_test$age_groups
+
+data_train = subset(data_train, select = -c(age_groups))
+data_test = subset(data_test, select = -c(age_groups))
+
+
+##run knn function
+pr = knn(data_train, data_test, cl=labels_train, k=5)
+
+##create confusion matrix
+tab = table(pr, labels_test)
+
+
+cat("Accuracy: ", round(accuracy(tab),2))
+cat("\nPrecision: ", round(precision(tab),2))
+cat("\nRecall: ", round(recall(tab),2))
 
 ```
 
