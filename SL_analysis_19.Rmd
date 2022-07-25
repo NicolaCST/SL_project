@@ -116,20 +116,6 @@ sub_data$age_groups = cut(sub_data$age, breaks=split_ages, include.lowest = TRUE
 
 
 ```{r}
-library(caret)
-
-sub_data = subset(tripdata_2019_r, select = -c(year, birth.year, start.station.name, end.station.name))
-
-control = rfeControl(functions = rfFuncs, method="cv", number=10)
-results = rfe(sub_data[1:500000,1:15], sub_data[1:500000,16], rfeControl = control)
-
-print(results)
-predictors(results)
-
-plot(results, type=c("g","o"))
-```
-
-```{r}
 par(mfrow=c(1,2))
 
 month_19 = table(sub_data$month)
@@ -1061,9 +1047,8 @@ y_age_groups = predict(classifier_RF, newdata = pred_dataset_age)
 
 pred_dataset_age$age_groups = y_age_groups
 table(y_age_groups)
-
-
 ```
+
 ```{r}
 full = get_balanced_dataset(data, w_gender = 1)
 data_train = as.data.frame(full[1])

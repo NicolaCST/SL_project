@@ -108,11 +108,16 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
 
 ```{r}
 tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+tripdata_2020_r$age_groups = 0
+
+split_ages = c(16, 25, 35, 45, 55, 65, 75, 80)
 ```
 
 
 ```{r}
-sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
+sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80 & tripdata_2020_r$age > 0,]
+sub_data$age_groups = cut(sub_data$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
+
 data = subset(sub_data, select = -c(year, 
                                     birth.year, 
                                     #startday, 
@@ -126,17 +131,18 @@ data = subset(sub_data, select = -c(year,
                                     end.station.latitude, 
                                     end.station.longitude))
 
+set.seed(42)
 
 full = get_balanced_dataset(data, w_gender = 0)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
-#our Y
-labels_train = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
-labels_test = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+labels_train = data_train$age_groups
+labels_test = data_test$age_groups
 
-data_train = subset(data_train, select = -c(age, gender))
-data_test = subset(data_test, select = -c(age, gender)) #gender? perchè lo togliamo?
+data_train = subset(data_train, select = -c(age, gender, age_groups))
+data_test = subset(data_test, select = -c(age, gender, age_groups)) #gender? perchè lo togliamo?
+
 
 classifier_RF = randomForest(x = data_train,
                              y = as.factor(labels_train),
@@ -157,9 +163,13 @@ cat("\nRecall: ", round(recall(confusion_mtx),2))
 ```
 
 
-#Let's try to predict the 0-age 
+#Let's try to predict the 0-age  and >80 age
 ```{r}
-discover = subset(sub_data, select = -c(year, 
+################# == 0 ################
+
+sub_data_0 = tripdata_2020_r[tripdata_2020_r$age == 0,]
+
+discover = subset(sub_data_0, select = -c(year, 
                                         birth.year, 
                                         #startday, 
                                         stopday,
@@ -171,18 +181,49 @@ discover = subset(sub_data, select = -c(year,
                                         end.station.name,
                                         end.station.latitude, 
                                         end.station.longitude,
-                                        gender))
+                                        gender,
+                                        age))
 
-discover = discover[discover$age == 0,]
-discover = subset(discover, select = -c(age))
-
-
-# Predicting the Test set results
 dec_age = predict(classifier_RF, newdata = discover)
-```
 
-```{r}
 table(as.data.frame(dec_age))
+
+tripdata_2020_r$age_groups = 0
+tripdata_2020_r[tripdata_2020_r$age == 0,]$age_groups = dec_age
+
+
+################# >= 80 ################
+
+
+sub_data_80 = tripdata_2020_r[tripdata_2020_r$age >= 80,]
+
+discover = subset(sub_data_80, select = -c(year, 
+                                        birth.year, 
+                                        #startday, 
+                                        stopday,
+                                        #end.station.id,  
+                                        #start.station.id, 
+                                        start.station.name,
+                                        start.station.latitude, 
+                                        start.station.longitude, 
+                                        end.station.name,
+                                        end.station.latitude, 
+                                        end.station.longitude,
+                                        gender,
+                                        age))
+
+dec_age = predict(classifier_RF, newdata = discover)
+
+table(as.data.frame(dec_age))
+
+tripdata_2020_r[tripdata_2020_r$age >= 80,]$age_groups = dec_age
+
+
+################# fill all the other values normally #####################
+
+tripdata_2020_r[tripdata_2020_r$age <= 80 & tripdata_2020_r$age > 0,]$age_groups = cut(sub_data$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
+
+barplot(table(tripdata_2020_r$age_groups))
 ```
 
 
@@ -191,10 +232,8 @@ table(as.data.frame(dec_age))
 ```{r}
 par(mfrow=c(1,2))
 
-sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
 month_20 = table(tripdata_2020_r$month)
 a = as.data.frame(month_20)
-
 
 freq_month_20 = barplot(month_20, 
      main = "Freq during months",
