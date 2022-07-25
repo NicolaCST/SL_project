@@ -915,8 +915,6 @@ table(y_gender)
 sub_data$gender[sub_data$gender == 0] = y_gender
 
 
-
-
 tab = table(sub_data$gender, sub_data$usertype)
 hist = barplot(tab, 
         beside = TRUE, 

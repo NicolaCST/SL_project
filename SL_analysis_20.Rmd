@@ -40,15 +40,15 @@ get_balanced_dataset = function(data, w_gender=0){
   data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
   
   if (w_gender != 0){
-    a = subset(data, age >= 16 & age < 30 & gender != 0)
-    b = subset(data, age >= 30 & age < 40 & gender != 0)
-    c = subset(data, age >= 40 & age < 60 & gender != 0)
-    d = subset(data, age >= 60 & age <= 80 & gender != 0)
+    a = subset(data, (age_groups == 1 | age_groups == 2) & gender != 0)
+    b = subset(data, (age_groups == 3 | age_groups == 4) & gender != 0)
+    c = subset(data, (age_groups == 5 | age_groups == 6) & gender != 0)
+    d = subset(data, (age_groups == 7) & gender != 0)
   }else{
-    a = subset(data, age >= 16 & age < 30)
-    b = subset(data, age >= 30 & age < 40)
-    c = subset(data, age >= 40 & age < 60)
-    d = subset(data, age >= 60 & age <= 80)
+    a = subset(data, (age_groups == 1 | age_groups == 2))
+    b = subset(data, (age_groups == 3 | age_groups == 4))
+    c = subset(data, (age_groups == 5 | age_groups == 6))
+    d = subset(data, (age_groups == 7))
   }
     
   
@@ -102,8 +102,6 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
     file.copy(file.path(current_path, file_name), html_file)
     rstudioapi::viewer(html_file)
 }
-
-
 ```
 
 ```{r}
@@ -111,6 +109,11 @@ tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
 tripdata_2020_r$age_groups = 0
 
 split_ages = c(16, 25, 35, 45, 55, 65, 75, 80)
+
+cat("min age:", min(tripdata_2020_r$age))
+cat("\nmax age:", max(tripdata_2020_r$age))
+cat("\nusers >80y:", nrow(tripdata_2020_r[tripdata_2020_r$age > 80,]))
+cat("\nusers = 0y:", nrow(tripdata_2020_r[tripdata_2020_r$age == 0,]))
 ```
 
 
@@ -198,19 +201,19 @@ tripdata_2020_r[tripdata_2020_r$age == 0,]$age_groups = dec_age
 sub_data_80 = tripdata_2020_r[tripdata_2020_r$age >= 80,]
 
 discover = subset(sub_data_80, select = -c(year, 
-                                        birth.year, 
-                                        #startday, 
-                                        stopday,
-                                        #end.station.id,  
-                                        #start.station.id, 
-                                        start.station.name,
-                                        start.station.latitude, 
-                                        start.station.longitude, 
-                                        end.station.name,
-                                        end.station.latitude, 
-                                        end.station.longitude,
-                                        gender,
-                                        age))
+                                          birth.year, 
+                                          #startday, 
+                                          stopday,
+                                          #end.station.id,  
+                                          #start.station.id, 
+                                          start.station.name,
+                                          start.station.latitude, 
+                                          start.station.longitude, 
+                                          end.station.name,
+                                          end.station.latitude, 
+                                          end.station.longitude,
+                                          gender,
+                                          age))
 
 dec_age = predict(classifier_RF, newdata = discover)
 
@@ -270,26 +273,86 @@ tab = table(sub_data$dayname)
 barplot(tab)
 ```
 
-
+#GENDER ASSUMER 2020
 ```{r}
-cat("min age:", min(tripdata_2020_r$age))
-cat("\nmax age:", max(tripdata_2020_r$age))
-cat("\nusers >80y:", nrow(tripdata_2020_r[tripdata_2020_r$age > 80,]))
-cat("\nusers = 0y:", nrow(tripdata_2020_r[tripdata_2020_r$age == 0,]))
+data = subset(tripdata_2020_r, select = -c(year, 
+                                          birth.year, 
+                                          #startday, 
+                                          stopday,
+                                          #end.station.id,  
+                                          #start.station.id, 
+                                          start.station.name,
+                                          start.station.latitude, 
+                                          start.station.longitude, 
+                                          end.station.name,
+                                          end.station.latitude, 
+                                          end.station.longitude,
+                                          age))
 
-par(mfrow=c(1,2))
 
 
-hist(tripdata_2020_r$age, 
-     breaks = 20,
-     xlab = "Age",
-     main = "Age Histogram 2020")
+full = get_balanced_dataset(data, w_gender = 1)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+labels_train = data_train$gender
+labels_test = data_test$gender
+
+data_train = subset(data_train, select = -c(gender))
+data_test = subset(data_test, select = -c(gender))
 
 
-dens = density(tripdata_2020_r$age)
-plot(dens,main = "Age density 2020")
+classifier_RF = randomForest(x = data_train,
+                             y = as.factor(labels_train),
+                             ntree = 100)
 
+
+# Predicting the Test set results
+y_pred = predict(classifier_RF, newdata = data_test)
+  
+# Confusion Matrix
+confusion_mtx = table(y_pred, labels_test)
+confusion_mtx
+
+# Plotting model
+plot(classifier_RF)
+  
+# Importance plot
+importance(classifier_RF)
+  
+# Variable importance plot
+varImpPlot(classifier_RF)
+
+cat("Accuracy: ", round(accuracy(confusion_mtx),2))
+cat("\nPrecision: ", round(precision(confusion_mtx),2))
+cat("\nRecall: ", round(recall(confusion_mtx),2))
 ```
+```{r}
+pred_dataset = subset(tripdata_2020_r, select = -c(year, 
+                                                  birth.year, 
+                                                  #startday, 
+                                                  stopday,
+                                                  #end.station.id,  
+                                                  #start.station.id, 
+                                                  start.station.name,
+                                                  start.station.latitude, 
+                                                  start.station.longitude, 
+                                                  end.station.name,
+                                                  end.station.latitude, 
+                                                  end.station.longitude,
+                                                  age))
+
+
+
+pred_dataset = pred_dataset[pred_dataset$gender == 0,]
+y_gender = predict(classifier_RF, newdata = pred_dataset[,-10])
+
+table(y_gender)
+
+tripdata_2020_r$gender[tripdata_2020_r$gender == 0] = y_gender
+```
+
+
 ```{r}
 boxplot(tripdata_2020_r$age)
 ```
