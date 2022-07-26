@@ -112,6 +112,7 @@ tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 split_ages = c(16, 25, 35, 45, 55, 65, 75, 80)
 sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
 sub_data$age_groups = cut(sub_data$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
+sub_data = subset(sub_data, select = -c(age, birth.year, year))
 ```
 
 
@@ -178,7 +179,12 @@ plot(dens,main = "Age density 2019")
 ```
 
 ```{r}
-X = subset(sub_data, select = c(tripduration, starttime, startday, month, start.station.id, end.station.id))
+X = subset(sub_data, select = -c(start.station.id,
+                                 start.station.name,
+                                 end.station.id,
+                                 end.station.name,
+                                 bikeid,
+                                 age_groups))
 
 #our Y
 age_groups = sub_data$age_groups
@@ -197,7 +203,7 @@ the t-statistic evaluates whether or not there is significant association betwee
 It seems like that the "startday" and "start.station.id" are not significant, thus we can remove them.
 
 ```{r}
-model = lm(age_groups~tripduration + starttime + month + end.station.id + start.station.id, data=X)
+model = lm(age_groups~. -startday -stopday, data=X)
 summary(model)
 ```
 
@@ -215,7 +221,7 @@ Test with best subset
 
 ```{r}
 #this appear to be the best subset
-model = lm(age_groups~. -year -birth.year -age -startday -end.station.id -stopday -start.station.id -bikeid -tripduration, data=sub_data)
+model = lm(age_groups~. -startday -stopday -bikeid -tripduration, data=X)
 summary(model)
 ```
 
@@ -245,7 +251,7 @@ ggpairs(X)
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
 ```{r}
-sub_data1 = subset(sub_data, select = -c(year, birth.year, start.station.name, end.station.name))
+sub_data1 = subset(sub_data, select = -c(start.station.name, end.station.name))
 round(var(sub_data1),2)
 res2<-rcorr(as.matrix(sub_data1))
 a = as.data.frame(flattenCorrMatrix(res2$r, res2$P))
