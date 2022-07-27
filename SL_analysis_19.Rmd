@@ -108,18 +108,25 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
 
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
+```
 
+```{r}
 split_ages = c(16, 25, 35, 45, 55, 65, 75, 80)
-sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
-sub_data$age_groups = cut(sub_data$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
-sub_data = subset(sub_data, select = -c(age, birth.year, year))
+data_u80 = tripdata_2019_r[tripdata_2019_r$age <= 80,]
+data_u80$age_groups = cut(data_u80$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
+
+data_o80 = tripdata_2019_r[tripdata_2019_r$age > 80,]
+data_o80$age_groups = 0
+
+data_u80 = subset(data_u80, select = -c(age, birth.year))
+data_o80 = subset(data_o80, select = -c(age, birth.year))
 ```
 
 
 ```{r}
 par(mfrow=c(1,2))
 
-month_19 = table(sub_data$month)
+month_19 = table(data_u80$month)
 
 freq_month_19 = barplot(month_19, 
      main = "Freq during months",
@@ -148,14 +155,24 @@ boxplot(tripdata_2019_r$age)
 ```
 
 ```{r}
-dates <- vector(mode="character", length=nrow(sub_data))
-for (i in 1:nrow(sub_data)){
-  dates[i] = paste(sub_data$year[i], sub_data$month[i], sub_data$startday[i], sep="-")
+dates <- vector(mode="character", length=nrow(data_u80))
+for (i in 1:nrow(data_u80)){
+  dates[i] = paste(data_u80$year[i], data_u80$month[i], data_u80$startday[i], sep="-")
 }
 dates <- weekdays(as.Date(dates))
-sub_data$dayname = dates
+data_u80$dayname = dates
 
-tab = table(sub_data$dayname)
+dates <- vector(mode="character", length=nrow(data_o80))
+for (i in 1:nrow(data_o80)){
+  dates[i] = paste(data_o80$year[i], data_o80$month[i], data_o80$startday[i], sep="-")
+}
+dates <- weekdays(as.Date(dates))
+data_o80$dayname = dates
+
+data_u80 = subset(data_u80, select = -c(year))
+data_o80 = subset(data_o80, select = -c(year))
+
+tab = table(data_u80$dayname)
 barplot(tab)
 ```
 
@@ -179,7 +196,7 @@ plot(dens,main = "Age density 2019")
 ```
 
 ```{r}
-X = subset(sub_data, select = -c(start.station.id,
+X = subset(data_u80, select = -c(start.station.id,
                                  start.station.name,
                                  end.station.id,
                                  end.station.name,
@@ -187,7 +204,7 @@ X = subset(sub_data, select = -c(start.station.id,
                                  age_groups))
 
 #our Y
-age_groups = sub_data$age_groups
+age_groups = data_u80$age_groups
 ```
 
 
@@ -251,26 +268,26 @@ ggpairs(X)
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
 ```{r}
-sub_data1 = subset(sub_data, select = -c(start.station.name, end.station.name))
-round(var(sub_data1),2)
-res2<-rcorr(as.matrix(sub_data1))
-a = as.data.frame(flattenCorrMatrix(res2$r, res2$P))
+corr_data = subset(data_u80, select = -c(start.station.name, end.station.name, dayname, year))
+round(var(corr_data),2)
+res<-rcorr(as.matrix(corr_data))
+a = as.data.frame(flattenCorrMatrix(res$r, res$P))
 ```
 
 ```{r}
-corrplot(cor(sub_data), type = "upper", order = "hclust", 
+corrplot(cor(corr_data), type = "upper", order = "hclust", 
          tl.col = "black", tl.srt = 45)
 ```
 
 ```{r}
 par(mfrow=c(1,2))
-plot(sub_data$start.station.longitude, sub_data$end.station.longitude)
-plot(sub_data$start.station.latitude, sub_data$end.station.latitude)
+plot(corr_data$start.station.longitude, corr_data$end.station.longitude)
+plot(corr_data$start.station.latitude, corr_data$end.station.latitude)
 
 ```
 
 ```{r}
-plot(round(sub_data$starttime/3600,2), round(sub_data$stoptime/3600,2))
+plot(round(corr_data$starttime/3600,2), round(corr_data$stoptime/3600,2))
 ```
 
 Remark: Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
@@ -279,7 +296,7 @@ EDA on gender and customer type
 
 ```{r}
 
-tab = table(sub_data$gender, sub_data$usertype)
+tab = table(data_u80$gender, data_u80$usertype)
 hist = barplot(tab, 
         beside = TRUE, 
         legend = FALSE,
@@ -301,7 +318,7 @@ text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 EDA userType / tripduration
 
 ```{r}
-EDA_UT = subset(sub_data, select = c(tripduration, usertype))
+EDA_UT = subset(data_u80, select = c(tripduration, usertype))
 
 customer_dur = EDA_UT[EDA_UT$usertype == 0,]
 customer_dur = subset(customer_dur, select = -c(usertype))
@@ -323,13 +340,7 @@ plot(density(tripdata_2019_r$age[tripdata_2019_r$age <= 80]), main = "Distributi
 ```
 
 ```{r}
-tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
-sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
-rm(tripdata_2019_r)
-
-data = subset(sub_data, select = -c(year, 
-                                    birth.year, 
-                                    #startday, 
+data = subset(data_u80, select = -c(#startday, 
                                     stopday,
                                     start.station.name,  
                                     start.station.id, 
@@ -338,7 +349,8 @@ data = subset(sub_data, select = -c(year,
                                     end.station.name,
                                     end.station.id,
                                     end.station.latitude, 
-                                    end.station.longitude))
+                                    end.station.longitude,
+                                    dayname))
 
 
 
@@ -359,12 +371,12 @@ ran_test = sample(1:nrow(data_train), 0.05 * nrow(data_train))
 data_test = data_train[ran_test,] 
 
 #our Y
-labels_train = cut(data_train$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
-labels_test = cut(data_test$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
+labels_train = data_train$age_groups
+labels_test = data_test$age_groups
 
 
-data_train = subset(data_train, select = -c(age, gender))
-data_test = subset(data_test, select = -c(age, gender))
+data_train = subset(data_train, select = -c(gender, age_groups))
+data_test = subset(data_test, select = -c(gender, age_groups))
 
 
 ##run knn function
@@ -381,12 +393,9 @@ cat("\nRecall: ", round(recall(tab),2))
 ```
 
 ```{r}
-tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
-unknown = tripdata_2019_r[tripdata_2019_r$age > 80,]
+unknown = data_o80
 
-un_data = subset(unknown, select = -c(year, 
-                                    birth.year, 
-                                    #startday, 
+un_data = subset(unknown, select = -c(#startday, 
                                     stopday,
                                     start.station.name,
                                     start.station.id, 
@@ -396,8 +405,9 @@ un_data = subset(unknown, select = -c(year,
                                     end.station.id, 
                                     end.station.latitude, 
                                     end.station.longitude,
-                                    age,
-                                    gender))
+                                    gender,
+                                    dayname,
+                                    age_groups))
 
 
 
@@ -423,22 +433,17 @@ table(new_method)
 ```
 
 ```{r}
-tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
-sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
-rm(tripdata_2019_r)
-
-data = subset(sub_data, select = -c(year, 
-                                    birth.year, 
-                                    #startday, 
+data = subset(data_u80, select = -c(#startday, 
                                     stopday,
-                                    #end.station.id,  
-                                    #start.station.id, 
+                                    end.station.id,  
+                                    start.station.id, 
                                     start.station.name,
                                     start.station.latitude, 
                                     start.station.longitude, 
                                     end.station.name,
                                     end.station.latitude, 
-                                    end.station.longitude))
+                                    end.station.longitude,
+                                    dayname))
 
 
 full = get_balanced_dataset(data, w_gender = 0)
@@ -446,11 +451,11 @@ data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
 #our Y
-labels_train = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
-labels_test = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+labels_train = data_train$age_groups
+labels_test = data_test$age_groups
 
-data_train = subset(data_train, select = -c(age, gender))
-data_test = subset(data_test, select = -c(age, gender)) #gender? perchè lo togliamo?
+data_train = subset(data_train, select = -c(age_groups, gender))
+data_test = subset(data_test, select = -c(age_groups, gender)) #gender? perchè lo togliamo?
 
 
 ##run knn function
