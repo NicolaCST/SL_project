@@ -12,6 +12,7 @@ library(randomForest)
 library(mda)
 library(klaR)
 library(dplyr)
+library(pROC)
 ```
 
 ```{r}
@@ -108,6 +109,10 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
 
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
+tripdata_2019_r = tripdata_2019_r[tripdata_2019_r$start.station.latitude != 0 &
+                                  tripdata_2019_r$start.station.longitude != 0 &
+                                  tripdata_2019_r$end.station.latitude != 0 &
+                                  tripdata_2019_r$end.station.longitude != 0]
 ```
 
 ```{r}
@@ -483,6 +488,29 @@ mean(predicted.classes == labels_test)
 ```
 
 ```{r}
+data = subset(data_u80, select = -c(#startday, 
+                                    #stopday,
+                                    #start.station.name,
+                                    #start.station.latitude, 
+                                    #start.station.longitude, 
+                                    #end.station.name,
+                                    #end.station.latitude, 
+                                    #end.station.longitude,
+                                    #dayname,
+                                    end.station.id,  
+                                    start.station.id))
+
+
+full = get_balanced_dataset(data, w_gender = 0)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+#our Y
+labels_train = data_train$age_groups
+labels_test = data_test$age_groups
+
+data_train = subset(data_train, select = -c(age_groups))
+data_test = subset(data_test, select = -c(age_groups))
 classifier_RF = randomForest(x = data_train,
                              y = as.factor(labels_train),
                              ntree = 100)
