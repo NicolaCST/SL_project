@@ -42,28 +42,32 @@ get_balanced_dataset = function(data, w_gender=0){
   data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
   
   if (w_gender != 0){
-    a = subset(data, (age_groups == 1 | age_groups == 2) & gender != 0)
-    b = subset(data, (age_groups == 3 | age_groups == 4) & gender != 0)
-    c = subset(data, (age_groups == 5 | age_groups == 6) & gender != 0)
-    d = subset(data, (age_groups == 7) & gender != 0)
+    a = subset(data, (age_groups == 1) & gender != 0)
+    b = subset(data, (age_groups == 2) & gender != 0)
+    c = subset(data, (age_groups == 3) & gender != 0)
+    d = subset(data, (age_groups == 4) & gender != 0)
   }else{
-    a = subset(data, (age_groups == 1 | age_groups == 2))
-    b = subset(data, (age_groups == 3 | age_groups == 4))
-    c = subset(data, (age_groups == 5 | age_groups == 6))
-    d = subset(data, (age_groups == 7))
+    a = subset(data, (age_groups == 1))
+    b = subset(data, (age_groups == 2))
+    c = subset(data, (age_groups == 3))
+    d = subset(data, (age_groups == 4))
   }
     
   
   ##Generate a random number that is 90% of the total number of rows in dataset.
-  ran = sample(1:nrow(d), 0.9 * nrow(d)) 
+  ran = sample(1:nrow(d), 0.95 * nrow(d)) 
   ##extract training set
   a_s = a[ran,]
   b_s = b[ran,]
   c_s = c[ran,]
   d_s = d[ran,]
   
+  a = setdiff(a,a_s)
+  b = setdiff(b,b_s)
+  c = setdiff(c,c_s)
+  d = setdiff(d,d_s)
   
-  ran_test = sample(1:nrow(d), 0.1 * nrow(d)) 
+  ran_test = sample(1:nrow(d), 1 * nrow(d)) 
   ##extract testing set
   a_t = a[ran_test,]
   b_t = b[ran_test,]
@@ -73,7 +77,7 @@ get_balanced_dataset = function(data, w_gender=0){
   data_train = rbind(a_s, b_s, c_s, d_s)
   data_test = rbind(a_t, b_t, c_t, d_t)
   
-  rm(a,b,c,d, a_s, b_s, c_s, d_s, a_t, b_t, c_t, d_t)
+  rm(a,b,c,d, a_s, b_s, c_s, a_t, b_t, c_t)
   
   return(list(data_train, data_test))
 }
@@ -109,10 +113,6 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
 
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
-tripdata_2019_r = tripdata_2019_r[tripdata_2019_r$start.station.latitude != 0 &
-                                  tripdata_2019_r$start.station.longitude != 0 &
-                                  tripdata_2019_r$end.station.latitude != 0 &
-                                  tripdata_2019_r$end.station.longitude != 0]
 ```
 
 ```{r}
@@ -127,6 +127,67 @@ data_u80 = subset(data_u80, select = -c(age, birth.year))
 data_o80 = subset(data_o80, select = -c(age, birth.year))
 ```
 
+```{r}
+split_ages = c(16, 30, 45, 65, 85)
+data_u80 = tripdata_2019_r[tripdata_2019_r$age <= 85,]
+data_u80$age_groups = cut(data_u80$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
+
+data_o80 = tripdata_2019_r[tripdata_2019_r$age > 85,]
+data_o80$age_groups = 0
+
+data_u80 = subset(data_u80, select = -c(age, birth.year))
+data_o80 = subset(data_o80, select = -c(age, birth.year))
+
+cat("min age:", min(tripdata_2019_r$age))
+cat("\nmax age:", max(tripdata_2019_r$age))
+cat("\nusers >85y:", nrow(tripdata_2019_r[tripdata_2019_r$age > 85,]))
+cat("\nusers = 0y:", nrow(tripdata_2019_r[tripdata_2019_r$age == 0,]))
+cat("\nusers >0 & <= 85:", nrow(tripdata_2019_r[tripdata_2019_r$age <= 85 & tripdata_2019_r$age > 0,]))
+nrow(data_u80[data_u80$age_groups == 4,])
+```
+
+```{r}
+data = subset(data_u80, select = -c(#startday, 
+                                    stopday,
+                                    #end.station.id,  
+                                    #start.station.id, 
+                                    start.station.name,
+                                    #start.station.latitude, 
+                                    #start.station.longitude, 
+                                    end.station.name
+                                    #end.station.latitude, 
+                                    #end.station.longitude
+                                    ))
+
+
+
+full = get_balanced_dataset(data, w_gender = 1)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+labels_train = data_train$age_groups
+labels_test = data_test$age_groups
+
+data_train = subset(data_train, select = -c(age_groups))
+data_test = subset(data_test, select = -c(age_groups))
+
+
+classifier_RF = randomForest(x = data_train,
+                             y = as.factor(labels_train),
+                             ntree = 100)
+
+
+# Predicting the Test set results
+y_pred = predict(classifier_RF, newdata = data_test)
+  
+# Confusion Matrix
+confusion_mtx = table(y_pred, labels_test)
+confusion_mtx
+
+cat("Accuracy: ", round(accuracy(confusion_mtx),2))
+cat("\nPrecision: ", round(precision(confusion_mtx),2))
+cat("\nRecall: ", round(recall(confusion_mtx),2))
+```
 
 ```{r}
 par(mfrow=c(1,2))
@@ -799,13 +860,7 @@ rstudio_viewer("BostonMap_age1.html", getwd())
 
 
 ```{r}
-tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
-sub_data = tripdata_2019_r[tripdata_2019_r$age <= 80,]
-rm(tripdata_2019_r)
-
-data = subset(sub_data, select = -c(year, 
-                                    birth.year, 
-                                    #startday, 
+data = subset(data_u80, select = -c(#startday, 
                                     stopday,
                                     #end.station.id,  
                                     #start.station.id, 
@@ -814,7 +869,8 @@ data = subset(sub_data, select = -c(year,
                                     start.station.longitude, 
                                     end.station.name,
                                     end.station.latitude, 
-                                    end.station.longitude))
+                                    end.station.longitude,
+                                    dayname))
 
 
 full = get_balanced_dataset(data, w_gender = 0)
@@ -822,13 +878,10 @@ data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
 #our Y
-labels_train = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
-labels_test = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
+labels_train = data_train$age_groups
+labels_test = data_test$age_groups
 
-data_train$age = labels_train
-data_test$age = labels_test
-
-pr_linear = lda(age~., data = data_train)
+pr_linear = lda(age_groups~., data = data_train)
 prediciton = pr_linear %>% predict(data_test)
 
 ##create confusion matrix
@@ -842,7 +895,7 @@ pr_linear
 ```
 
 ```{r}
-pr_quadratic = qda(age~., data = data_train)
+pr_quadratic = qda(age_groups~., data = data_train)
 prediciton_quadratic = pr_quadratic %>% predict(data_test)
 
 tab = table(prediciton_quadratic$class, labels_test)
