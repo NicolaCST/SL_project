@@ -577,7 +577,7 @@ legend("topleft",
 
 
 ```{r}
-data = subset(sub_data, select = c(age,
+data = subset(data_u80, select = c(age_groups,
                                   start.station.name,
                                   start.station.latitude, 
                                   start.station.longitude,
@@ -585,13 +585,9 @@ data = subset(sub_data, select = c(age,
                                   end.station.latitude, 
                                   end.station.longitude))
 
-
-data$age = cut(data$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
-
-
 EDA_id_station = subset(data, select = c(start.station.name,
                                          end.station.name,
-                                         age))
+                                         age_groups))
 
 # TOP 10 START #
 tab = as.data.frame(table(EDA_id_station$start.station.name))
@@ -603,7 +599,7 @@ colnames(start_tab) = c("1","2", "3", "4")
 
 for (rowIdx in 1:(nrow(start_tab))) {
   for (colIdx in 1:(ncol(start_tab))) {
-    start_tab[rowIdx, colIdx] = nrow(subset(EDA_id_station, age == colIdx & start.station.name == top_10_start[rowIdx,1]))
+    start_tab[rowIdx, colIdx] = nrow(subset(EDA_id_station, age_groups == colIdx & start.station.name == top_10_start[rowIdx,1]))
   }
 }
 
@@ -621,7 +617,7 @@ colnames(end_tab) = c("1","2", "3", "4")
 
 for (rowIdx in 1:(nrow(end_tab))) {
   for (colIdx in 1:(ncol(end_tab))) {
-    end_tab[rowIdx, colIdx] = nrow(subset(EDA_id_station, age == colIdx & end.station.name == top_10_end[rowIdx,1]))
+    end_tab[rowIdx, colIdx] = nrow(subset(EDA_id_station, age_groups == colIdx & end.station.name == top_10_end[rowIdx,1]))
   }
 }
 
@@ -660,9 +656,9 @@ legend("topright", legend = end_tab$end_name,
 
 
 ```{r}
-tab = as.data.frame(table(data$age, data$start.station.name, data$start.station.latitude))
+tab = table(data$age_groups, data$start.station.name, data$start.station.latitude)
 temp = order(colSums(tab), decreasing = T) #da errore 
-temp = as.data.frame(tab[,temp[1:10],])
+temp = as.data.frame(tab[1:10])
 
 par(mar=c(4,16,4,0))
 barplot(temp,
@@ -680,14 +676,14 @@ temp$start.station.name[1]
 ```
 
 ```{r}
-map_start = subset(sub_data, select = c(start.station.name,
+map_start = subset(data_u80, select = c(start.station.name,
                                   start.station.latitude, 
                                   start.station.longitude))
 map_start = map_start[!duplicated(map_start[ , c("start.station.name")]),]
 map_start = map_start[map_start$start.station.name %in% start_tab$start_name,]
 
 
-map_end = subset(sub_data, select = c(end.station.name,
+map_end = subset(data_u80, select = c(end.station.name,
                                   end.station.latitude, 
                                   end.station.longitude))
 map_end = map_end[!duplicated(map_end[ , c("end.station.name")]),]
@@ -734,30 +730,31 @@ map_hooray.save("BostonMap.html")
 
 
 ```{r}
-tab = as.data.frame(table(data$age, data$start.station.name))
-colnames(tab) = c("age", "start.station.name", "freq")
+tab = as.data.frame(table(data$age_groups, data$start.station.name))
+colnames(tab) = c("age_groups", "start.station.name", "freq")
 
 
-one = tab[tab$age == 1,]
+one = tab[tab$age_groups == 1,]
 temp = one[order(one$freq, decreasing = T),][1:10,]
 
-two = tab[tab$age == 2,]
+two = tab[tab$age_groups == 2,]
 temp = rbind(temp, (two[order(two$freq, decreasing = T),][1:10,]))
 
-three = tab[tab$age == 3,]
+three = tab[tab$age_groups == 3,]
 temp = rbind(temp, (three[order(three$freq, decreasing = T),][1:10,]))
 
-four = tab[tab$age == 4,]
+four = tab[tab$age_groups == 4,]
 temp = rbind(temp, (four[order(four$freq, decreasing = T),][1:10,]))
 
 temp$lat = NA
 temp$long = NA
+temp = as.data.frame(temp)
 
 for (idx in 1:nrow(temp)){
   name = temp$start.station.name[idx]
   
   temp[idx, 4] = data$start.station.latitude[data$start.station.name == name][1]
-  temp[idx, 5] = data$start.station.longitude[data$start.station.name == name]
+  temp[idx, 5] = data$start.station.longitude[data$start.station.name == name][1]
 }
 
 
