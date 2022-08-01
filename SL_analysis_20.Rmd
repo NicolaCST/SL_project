@@ -50,7 +50,6 @@ get_balanced_dataset = function(data, w_gender=0){
     #c = subset(data, (age_groups == 5 | age_groups == 6))
     #d = subset(data, (age_groups == 7))
     
-    
     a = subset(data, (age_groups == 1))
     b = subset(data, (age_groups == 2))
     d = subset(data, (age_groups == 3))

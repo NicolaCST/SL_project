@@ -63,6 +63,12 @@ get_balanced_dataset = function(data, w_gender=0){
   d_s = d[ran,]
   
   
+  a = setdiff(a,a_s)
+  b = setdiff(b,b_s)
+  c = setdiff(c, c_s)
+  d = setdiff(d,d_s)
+  
+  
   ran_test = sample(1:nrow(d), 0.1 * nrow(d)) 
   ##extract testing set
   a_t = a[ran_test,]
@@ -1010,23 +1016,24 @@ cat("\nRecall: ", round(recall(tab),2))
 
 #AGE PREDICTER
 ```{r}
-data = subset(sub_data, select = -c(year, 
+data = subset(data_u80, select = -c(year, 
                                     birth.year, 
                                     #startday, 
                                     stopday,
                                     #end.station.id,  
                                     #start.station.id, 
-                                    start.station.name,
+                                    #start.station.name,
                                     #start.station.latitude, 
                                     #start.station.longitude, 
-                                    end.station.name,
+                                    #end.station.name,
                                     #end.station.latitude, 
                                     #end.station.longitude,
-                                    age))
+                                    age,
+                                    gender))
 
 
 
-full = get_balanced_dataset(data, w_gender = 1)
+full = get_balanced_dataset(data, w_gender = 0)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
@@ -1040,7 +1047,6 @@ data_test = subset(data_test, select = -c(age_groups))
 classifier_RF = randomForest(x = data_train,
                              y = as.factor(labels_train),
                              ntree = 100)
-
 
 # Predicting the Test set results
 y_pred = predict(classifier_RF, newdata = data_test)
