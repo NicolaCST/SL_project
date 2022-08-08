@@ -14,6 +14,9 @@ library(klaR)
 library(dplyr)
 library(pROC)
 library(nnet)
+library(caret)
+library(tidyverse)
+library(MASS)
 
 set.seed(42)
 ```
@@ -170,8 +173,8 @@ data_u85$age_groups = cut(data_u85$age, breaks=split_ages, include.lowest = TRUE
 data_o85 = tripdata_2019_r[tripdata_2019_r$age > 85,]
 data_o85$age_groups = 0
 
-data_u85 = subset(data_u85, select = -c(age, birth.year, year, start.station.name, end.station.name))
-data_o85 = subset(data_o85, select = -c(age, birth.year, year, start.station.name, end.station.name))
+data_u85 = subset(data_u85, select = -c(age, birth.year, year)) #start.station.name, end.station.name
+data_o85 = subset(data_o85, select = -c(age, birth.year, year))
 ```
 
 ```{r}
@@ -275,6 +278,7 @@ legend("topleft",
        legend = c("Group 1: 16-30", "Group 2: 31-45", "Group 3: 46-65", "Group 4: 65+"),
        fill = our_palette)
 ```
+
 #CORRELATION MATRIX
 
 ```{r}
@@ -286,12 +290,14 @@ a = as.data.frame(flattenCorrMatrix(res$r, res$P))
 corrplot(cor(corr_data), type = "upper", order = "hclust", 
          tl.col = "black", tl.srt = 45)
 ```
+
 ```{r}
 # find attributes that are highly corrected (ideally >0.75)
 highlyCorrelated = findCorrelation(cor(corr_data), cutoff=0.75)
 # print indexes of highly correlated attributes
 print(highlyCorrelated)
 ```
+
 ```{r}
 par(mfrow=c(1,2))
 plot(corr_data$start.station.longitude, corr_data$end.station.longitude)
@@ -364,6 +370,7 @@ plot(results, type=c("g", "o"))
 
 ```{r}
 ####### MULTINOMIAL LOGISTIC REGRESSION ###################
+
 full = get_balanced_dataset(data_u85, w_gender = 1)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
@@ -378,13 +385,16 @@ plot_stats(tab_train, mode="train", cf = F)
 
 ## TEST SET
 pred = predict(multinom_age_model, newdata = data_test)
-tab_test = table(pred, data_test$age_groups)
+tab_test_mlr = table(pred, data_test$age_groups)
 
-plot_stats(tab_test, cf = T)
+plot_stats(tab_test_mlr, cf = T)
 ```
 
 
 ```{r}
+
+####################### KNN ################################
+
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
@@ -406,6 +416,9 @@ plot_stats(tab_test_knn, cf = T)
 
 
 ```{r}
+
+################### RANDOM FOREST ##########################
+
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
@@ -439,8 +452,6 @@ varImpPlot(rf_model)
 
 ```
 
-
-
 ```{r}
 rocs = multiclass.roc(as.numeric(labels_test), as.numeric(rf_model_pred))
 rs = rocs[["rocs"]]
@@ -449,6 +460,8 @@ sapply(2:length(rs),function(i) lines.roc(rs[[i]],col=i))
 ```
 
 ```{r}
+################### LDA ################################
+
 full = get_balanced_dataset(data_u85, w_gender = 1)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
@@ -463,31 +476,63 @@ plot_stats(tab_train, mode="train", cf = F)
 
 ## TEST SET
 pred = predict(lda_model, newdata = data_test)
-tab_test = table(pred$class, data_test$age_groups)
+tab_test_lda = table(pred$class, data_test$age_groups)
 
-plot_stats(tab_test, cf = T)
+plot_stats(tab_test_lda, cf = T)
 
 ```
 
 ```{r}
+################## MDA ############################
+
 full = get_balanced_dataset(data_u85, w_gender = 1)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
-# Fit the model
-qda_model = qda(age_groups~., data = data_train)
+mixture_model = mda(age_groups~., data = data_train)
 
-pred = predict(qda_model, newdata = data_train)
-tab_train = table(pred$class, data_train$age_groups)
+pred_mda_train = mixture_model %>% predict(data_train)
+tab_train_mda = table(pred_mda_train, data_train$age_groups)
+plot_stats(tab_train_mda, mode="train", cf = F)
 
-plot_stats(tab_train, mode="train", cf = F)
+pred_mda_train = mixture_model %>% predict(data_test)
+tab_test_mda = table(pred_mda_train, data_test$age_groups)
+plot_stats(tab_test_mda, mode="test", cf = T)
 
-## TEST SET
-pred = predict(qda_model, newdata = data_test)
-tab_test = table(pred$class, data_test$age_groups)
-
-plot_stats(tab_test, cf = T)
 ```
+
+
+
+```{r}
+
+vec_name_model = c("MLR", "KNN", "RF", "LDA", "MDA")
+
+vec_acc_model = c((round(accuracy(tab_test_mlr),2)),
+                  (round(accuracy(tab_test_knn),2)),
+                  (round(accuracy(tab_test_rf),2)),
+                  (round(accuracy(tab_test_lda),2)),
+                  (round(accuracy(tab_test_mda),2)))
+
+
+tab_accuracy_models = data.frame(vec_name_model, vec_acc_model)
+
+barplot_acc_model = barplot(tab_accuracy_models$vec_acc_model, 
+     main = "Summary test accuracy",
+     xlab = "Model name",
+     ylab = "Accuracy",
+     col = "light green",
+     names.arg = tab_accuracy_models$vec_name_model)
+
+```
+
+
+
+
+
+
+
+
+
 
 
 ```{r}
@@ -747,29 +792,8 @@ cat("\nRecall: ", round(recall(tab),2))
 pr_linear
 ```
 
-```{r}
-pr_quadratic = qda(age_groups~., data = data_train)
-prediciton_quadratic = pr_quadratic %>% predict(data_test)
 
-tab = table(prediciton_quadratic$class, labels_test)
 
-cat("Accuracy: ", round(accuracy(tab),2))
-cat("\nPrecision: ", round(precision(tab),2))
-cat("\nRecall: ", round(recall(tab),2))
-```
-
-```{r}
-
-pr_mixture = mda(age_groups~., data = data_train)
-pr_mixture
-prediciton_mixture = pr_mixture %>% predict(data_test)
-
-tab = table(prediciton_mixture, labels_test)
-
-cat("Accuracy: ", round(accuracy(tab),2))
-cat("\nPrecision: ", round(precision(tab),2))
-cat("\nRecall: ", round(recall(tab),2))
-```
 
 
 #ASSUMING GENDER
