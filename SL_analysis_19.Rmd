@@ -13,6 +13,8 @@ library(mda)
 library(klaR)
 library(dplyr)
 library(pROC)
+
+set.seed(42)
 ```
 
 ```{r}
@@ -35,9 +37,9 @@ recall = function(x){(diag(x)/((colSums(x)))) * 100}
 #returns two dataset: train and test
 get_balanced_dataset = function(data, w_gender=0){
   
-  #data$tripduration = round(data$tripduration/60,2)
-  #data$starttime = round(data$starttime/60,2)
-  #data$stoptime = round(data$stoptime/60,2)
+  data$tripduration = round(data$tripduration/60,2)
+  data$starttime = round(data$starttime/60,2)
+  data$stoptime = round(data$stoptime/60,2)
   
   data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
   
@@ -109,6 +111,22 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
     file.copy(file.path(current_path, file_name), html_file)
     rstudioapi::viewer(html_file)
 }
+
+plot_stats <- function(tab, mode="test", cf=F){
+  
+  cat("\n", "---------", mode, "---------", "\n")
+  
+  cat("\nAccuracy: ", round(accuracy(tab),2))
+  cat("\nPrecision: ", round(precision(tab),2))
+  cat("\nRecall: ", round(recall(tab),2), "\n")
+  
+  if(cf == T){
+      cat("\n", "---------", "CF", "---------", "\n")
+      tab
+  }
+
+}
+
 
 our_palette = c(rgb(1, 0, 0), 
               rgb(0, 1, 0), 
@@ -285,8 +303,37 @@ plot(corr_data$startday, corr_data$stopday)
 plot(corr_data$age_groups, corr_data$gender)
 ```
 
+```{r}
+dates <- vector(mode="character", length=nrow(data_u85))
+
+for (i in 1:nrow(data_u85)){
+  dates[i] = paste("2019", data_u85$month[i], data_u85$startday[i], sep="-")
+}
+
+dates <- weekdays(as.Date(dates))
+data_u85$dayname = dates
+
+dates <- vector(mode="character", length=nrow(data_o85))
+
+for (i in 1:nrow(data_o85)){
+  dates[i] = paste("2019", data_o85$month[i], data_o85$startday[i], sep="-")
+}
+
+dates <- weekdays(as.Date(dates))
+data_o85$dayname = dates
+
+data_u85 = subset(data_u85, select = -c(year))
+data_o85 = subset(data_o85, select = -c(year))
+
+tab = table(data_u85$dayname)
+barplot(tab)
+```
+
+###########################################################################################
 
 ```{r}
+####### BACKW FEATURE SELECTION ###################
+
 full = get_balanced_dataset(corr_data, w_gender = 1)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
@@ -317,198 +364,30 @@ plot(results, type=c("g", "o"))
 
 
 
-
 ```{r}
-dates <- vector(mode="character", length=nrow(data_u85))
+####### MULTINOMIAL LOGISTIC REGRESSION ###################
 
-for (i in 1:nrow(data_u85)){
-  dates[i] = paste("2019", data_u85$month[i], data_u85$startday[i], sep="-")
-}
-
-dates <- weekdays(as.Date(dates))
-data_u85$dayname = dates
-
-dates <- vector(mode="character", length=nrow(data_o85))
-
-for (i in 1:nrow(data_o85)){
-  dates[i] = paste("2019", data_o85$month[i], data_o85$startday[i], sep="-")
-}
-
-dates <- weekdays(as.Date(dates))
-data_o85$dayname = dates
-
-data_u85 = subset(data_u85, select = -c(year))
-data_o85 = subset(data_o85, select = -c(year))
-
-tab = table(data_u85$dayname)
-barplot(tab)
-```
-
-
-```{r}
-par(mfrow=c(1,2))
-hist(labels_train, probability = TRUE)
-plot(density(tripdata_2019_r$age[tripdata_2019_r$age <= 80]), main = "Distribution of ages")
-```
-
-```{r}
-data = subset(data_u85, select = -c(#startday, 
-                                    stopday,
-                                    start.station.name,  
-                                    start.station.id, 
-                                    start.station.latitude, 
-                                    start.station.longitude, 
-                                    end.station.name,
-                                    end.station.id,
-                                    end.station.latitude, 
-                                    end.station.longitude,
-                                    dayname))
-
-
-
-data$tripduration = round(data$tripduration/60,2)
-data$starttime = round(data$starttime/60,2)
-data$stoptime = round(data$stoptime/60,2)
-
-data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
-
-
-##Generate a random number that is 90% of the total number of rows in dataset.
-ran = sample(1:nrow(data), 0.2 * nrow(data)) 
-##extract training set
-data_train = data[ran,] 
-
-ran_test = sample(1:nrow(data_train), 0.05 * nrow(data_train)) 
-##extract testing set
-data_test = data_train[ran_test,] 
-
-#our Y
-labels_train = data_train$age_groups
-labels_test = data_test$age_groups
-
-
-data_train = subset(data_train, select = -c(gender, age_groups))
-data_test = subset(data_test, select = -c(gender, age_groups))
-
-
-##run knn function
-pr = knn(data_train, data_test, cl=labels_train, k=10)
-
-##create confusion matrix
-tab = table(pr, labels_test)
-
-
-cat("Accuracy: ", round(accuracy(tab),2))
-cat("\nPrecision: ", round(precision(tab),2))
-cat("\nRecall: ", round(recall(tab),2))
-
-```
-
-```{r}
-unknown = data_o85
-
-un_data = subset(unknown, select = -c(#startday, 
-                                    stopday,
-                                    start.station.name,
-                                    start.station.id, 
-                                    start.station.latitude, 
-                                    start.station.longitude, 
-                                    end.station.name,
-                                    end.station.id, 
-                                    end.station.latitude, 
-                                    end.station.longitude,
-                                    gender,
-                                    dayname,
-                                    age_groups))
-
-
-
-un_data$tripduration = round(un_data$tripduration/60,2)
-un_data$starttime = round(un_data$starttime/60,2)
-un_data$stoptime = round(un_data$stoptime/60,2)
-
-un_data[c("tripduration", "starttime", "stoptime")] = lapply(un_data[c("tripduration", "starttime", "stoptime")], nor)
-
-
-##run knn function
-pr_un_data = knn(data_train, un_data, cl=labels_train, k=10)
-```
-
-```{r}
-old_method = pr_un_data
-table(old_method)
-```
-
-```{r}
-new_method = pr_un_data
-table(new_method)
-```
-
-```{r}
-data = subset(data_u85, select = -c(#startday, 
-                                    stopday,
-                                    end.station.id,  
-                                    start.station.id, 
-                                    start.station.name,
-                                    start.station.latitude, 
-                                    start.station.longitude, 
-                                    end.station.name,
-                                    end.station.latitude, 
-                                    end.station.longitude,
-                                    dayname))
-
-
-full = get_balanced_dataset(data, w_gender = 0)
+full = get_balanced_dataset(data_u85, w_gender = 1)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
-#our Y
-labels_train = data_train$age_groups
-labels_test = data_test$age_groups
-
-data_train = subset(data_train, select = -c(age_groups, gender))
-data_test = subset(data_test, select = -c(age_groups, gender)) #gender? perchè lo togliamo?
-
-
-##run knn function
-pr = knn(data_train, data_test, cl=labels_train, k=1)
-
-##create confusion matrix
-tab = table(pr, labels_test)
-
-cat("Accuracy: ", round(accuracy(tab),2))
-cat("\nPrecision: ", round(precision(tab),2))
-cat("\nRecall: ", round(recall(tab),2))
-
-```
-
-```{r}
 # Fit the model
-model = nnet::multinom(labels_train ~., data = data_train)
+multinom_age_model = nnet::multinom(age_groups ~., data = data_train)
+
+pred = predict(multinom_age_model, newdata = data_train)
+tab_train = table(pred, data_train$age_groups)
+
+plot_stats(tab_train, mode="train", cf = F)
+
+## TEST SET
+pred = predict(multinom_age_model, newdata = data_test)
+tab_test = table(pred, data_test$age_groups)
+
+plot_stats(tab_test, cf = T)
 ```
 
-```{r}
-# Make predictions
-predicted.classes = model %>% predict(data_test)
-# Model accuracy
-mean(predicted.classes == labels_test)
-```
 
 ```{r}
-data = subset(data_u85, select = -c(#startday, 
-                                    #stopday,
-                                    #start.station.name,
-                                    #start.station.latitude, 
-                                    #start.station.longitude, 
-                                    #end.station.name,
-                                    #end.station.latitude, 
-                                    #end.station.longitude,
-                                    #dayname,
-                                    end.station.id,  
-                                    start.station.id))
-
-
-full = get_balanced_dataset(data, w_gender = 0)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
@@ -518,39 +397,55 @@ labels_test = data_test$age_groups
 
 data_train = subset(data_train, select = -c(age_groups))
 data_test = subset(data_test, select = -c(age_groups))
-classifier_RF = randomForest(x = data_train,
+
+##run knn function
+knn_model_pred = knn(data_train, data_test, cl=labels_train, k=10)
+
+tab_test_knn = table(knn_model_pred, labels_test)
+
+plot_stats(tab_test_knn, cf = T)
+
+```
+
+
+```{r}
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+#our Y
+labels_train = data_train$age_groups
+labels_test = data_test$age_groups
+
+data_train = subset(data_train, select = -c(age_groups))
+data_test = subset(data_test, select = -c(age_groups))
+
+rf_model = randomForest(x = data_train,
                              y = as.factor(labels_train),
                              ntree = 100)
-```
 
-```{r}
-# Predicting the Test set results
-y_pred = predict(classifier_RF, newdata = data_test)
-  
-# Confusion Matrix
-confusion_mtx = table(y_pred, labels_test)
-confusion_mtx
-```
 
-```{r}
-# Plotting model
-plot(classifier_RF)
+
+rf_model_pred_train = predict(rf_model, newdata = data_train)
+rf_model_pred = predict(rf_model, newdata = data_test)
+
+# train resuls
+tab_train_rf = table(rf_model_pred_train, labels_train)
+plot_stats(tab_train_rf, mode="train", cf = F)
   
-# Importance plot
-importance(classifier_RF)
-  
+# test result
+tab_test_rf = table(rf_model_pred, labels_test)
+plot_stats(tab_test_rf, mode="test", cf = T)
+
+
 # Variable importance plot
-varImpPlot(classifier_RF)
+varImpPlot(rf_model)
+
 ```
 
-```{r}
-cat("Accuracy: ", round(accuracy(confusion_mtx),2))
-cat("\nPrecision: ", round(precision(confusion_mtx),2))
-cat("\nRecall: ", round(recall(confusion_mtx),2))
-```
+
 
 ```{r}
-rocs = multiclass.roc(as.numeric(labels_test), as.numeric(y_pred))
+rocs = multiclass.roc(as.numeric(labels_test), as.numeric(rf_model_pred))
 rs = rocs[["rocs"]]
 plot.roc(rs[[1]])
 sapply(2:length(rs),function(i) lines.roc(rs[[i]],col=i))
