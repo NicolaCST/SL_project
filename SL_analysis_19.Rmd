@@ -13,6 +13,7 @@ library(mda)
 library(klaR)
 library(dplyr)
 library(pROC)
+library(nnet)
 
 set.seed(42)
 ```
@@ -169,8 +170,8 @@ data_u85$age_groups = cut(data_u85$age, breaks=split_ages, include.lowest = TRUE
 data_o85 = tripdata_2019_r[tripdata_2019_r$age > 85,]
 data_o85$age_groups = 0
 
-data_u85 = subset(data_u85, select = -c(age, birth.year, year))
-data_o85 = subset(data_o85, select = -c(age, birth.year, year))
+data_u85 = subset(data_u85, select = -c(age, birth.year, year, start.station.name, end.station.name))
+data_o85 = subset(data_o85, select = -c(age, birth.year, year, start.station.name, end.station.name))
 ```
 
 ```{r}
@@ -277,7 +278,7 @@ legend("topleft",
 #CORRELATION MATRIX
 
 ```{r}
-corr_data = subset(data_u85, select = -c(year))
+corr_data = data_u85
 round(var(corr_data),2)
 res<-rcorr(as.matrix(corr_data))
 a = as.data.frame(flattenCorrMatrix(res$r, res$P))
@@ -322,9 +323,6 @@ for (i in 1:nrow(data_o85)){
 dates <- weekdays(as.Date(dates))
 data_o85$dayname = dates
 
-data_u85 = subset(data_u85, select = -c(year))
-data_o85 = subset(data_o85, select = -c(year))
-
 tab = table(data_u85$dayname)
 barplot(tab)
 ```
@@ -366,13 +364,12 @@ plot(results, type=c("g", "o"))
 
 ```{r}
 ####### MULTINOMIAL LOGISTIC REGRESSION ###################
-
 full = get_balanced_dataset(data_u85, w_gender = 1)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
 # Fit the model
-multinom_age_model = nnet::multinom(age_groups ~., data = data_train)
+multinom_age_model = multinom(age_groups ~., data = data_train)
 
 pred = predict(multinom_age_model, newdata = data_train)
 tab_train = table(pred, data_train$age_groups)
@@ -451,6 +448,46 @@ plot.roc(rs[[1]])
 sapply(2:length(rs),function(i) lines.roc(rs[[i]],col=i))
 ```
 
+```{r}
+full = get_balanced_dataset(data_u85, w_gender = 1)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+# Fit the model
+lda_model = lda(age_groups~., data = data_train)
+
+pred = predict(lda_model, newdata = data_train)
+tab_train = table(pred$class, data_train$age_groups)
+
+plot_stats(tab_train, mode="train", cf = F)
+
+## TEST SET
+pred = predict(lda_model, newdata = data_test)
+tab_test = table(pred$class, data_test$age_groups)
+
+plot_stats(tab_test, cf = T)
+
+```
+
+```{r}
+full = get_balanced_dataset(data_u85, w_gender = 1)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+# Fit the model
+qda_model = qda(age_groups~., data = data_train)
+
+pred = predict(qda_model, newdata = data_train)
+tab_train = table(pred$class, data_train$age_groups)
+
+plot_stats(tab_train, mode="train", cf = F)
+
+## TEST SET
+pred = predict(qda_model, newdata = data_test)
+tab_test = table(pred$class, data_test$age_groups)
+
+plot_stats(tab_test, cf = T)
+```
 
 
 ```{r}
