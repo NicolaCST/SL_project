@@ -525,8 +525,54 @@ barplot_acc_model = barplot(tab_accuracy_models$vec_acc_model,
 
 ```
 
+```{r}
+####### BACKW FEATURE SELECTION ###################
+corr_data = subset(data_u85, select = -c(start.station.name, end.station.name)) #start.station.name, end.station.name
+full = get_balanced_dataset(corr_data, w_gender = 1)
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
+labels_train = data_train$gender
+labels_test = data_test$gender
+
+data_train = subset(data_train, select = -c(gender))
+data_test = subset(data_test, select = -c(gender))
 
 
+# define the control using a random forest selection function
+control <- rfeControl(functions=rfFuncs, method="cv", number=5)
+# run the RFE algorithm
+results <- rfe(data_train, as.factor(labels_train), sizes=c(4:15), rfeControl=control)
+# summarize the results
+print(results)
+# list the chosen features
+predictors(results)
+# plot the results
+plot(results, type=c("g", "o"))
+```
+
+
+```{r}
+'''
+  n_var  acc   kappa   acc_sd   kappa_sd
+1	  4	  0.8194	0.2796	0.002305	0.010851	
+2	  5	  0.8233	0.2823	0.001353	0.020734	
+3	  6	  0.8279	0.3146	0.001405	0.008930	
+4	  7	  0.8273	0.3151	0.001297	0.008708	
+5	  8	  0.8450	0.3933	0.001821	0.008760	
+6	  9	  0.8505	0.3988	0.001577	0.007542	*
+7	 10	  0.8482	0.3793	0.001710	0.009814	
+8	 11	  0.8492	0.3816	0.002060	0.009514	
+9	 12	  0.8494	0.3793	0.001824	0.010752	
+10 13	  0.8446	0.3402	0.001772	0.011093	
+11 14	  0.8399	0.3077	0.002545	0.015396	
+12 15	  0.8370	0.2802	0.001995	0.012672	
+
+[1] "tripduration"            "start.station.latitude"  "end.station.latitude"   
+[4] "end.station.longitude"   "end.station.id"          "start.station.longitude"
+[7] "start.station.id"        "age_groups"              "starttime"
+'''
+```
 
 
 
