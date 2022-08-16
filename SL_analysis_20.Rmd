@@ -30,58 +30,140 @@ precision = function(x){(diag(x)/((rowSums(x)))) * 100}
 recall = function(x){(diag(x)/((colSums(x)))) * 100}
 
 
-#returns two dataset: train and test
-get_balanced_dataset = function(data, w_gender=0){
+sample_sub <- function(data, perc){
   
-  data$tripduration = round(data$tripduration/60,2)
-  data$starttime = round(data$starttime/60,2)
-  data$stoptime = round(data$stoptime/60,2)
+  num = nrow(data) * as.numeric(perc)
+  ran = sample(1:num, 0.95 * num)
+
+  a_s = data[ran,]
+  diff = setdiff(data,a_s)
   
-  data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
-  
-  if (w_gender != 0){
-    a = subset(data, (age_groups == 1 | age_groups == 2) & gender != 0)
-    b = subset(data, (age_groups == 3 | age_groups == 4) & gender != 0)
-    c = subset(data, (age_groups == 5 | age_groups == 6) & gender != 0)
-    d = subset(data, (age_groups == 7) & gender != 0)
-  }else{
-    #a = subset(data, (age_groups == 1 | age_groups == 2))
-    #b = subset(data, (age_groups == 3 | age_groups == 4))
-    #c = subset(data, (age_groups == 5 | age_groups == 6))
-    #d = subset(data, (age_groups == 7))
-    
-    a = subset(data, (age_groups == 1))
-    b = subset(data, (age_groups == 2))
-    d = subset(data, (age_groups == 3))
-  }
-    
-  
-  ##Generate a random number that is 90% of the total number of rows in dataset.
-  ran = sample(1:nrow(d), 0.9 * nrow(d)) 
-  ##extract training set
-  a_s = a[ran,]
-  b_s = b[ran,]
-  #c_s = c[ran,]
-  d_s = d[ran,]
-  
-  a = setdiff(a,a_s)
-  b = setdiff(b,b_s)
-  d = setdiff(d,d_s)
-  
-  ran_test = sample(1:nrow(d), 0.1 * nrow(d)) 
-  ##extract testing set
-  a_t = a[ran_test,]
-  b_t = b[ran_test,]
-  #c_t = c[ran_test,]
-  d_t = d[ran_test,]
-  
-  data_train = rbind(a_s, b_s, d_s)
-  data_test = rbind(a_t, b_t, d_t)
-  
-  rm(a,b,c,d, a_s, b_s, d_s, a_t, b_t, d_t)
-  
-  return(list(data_train, data_test))
+  ran_test = sample(1:nrow(diff), 0.05 * num)
+  a_t = diff[ran_test,]
+
+  return(list(a_s, a_t))
 }
+
+
+#returns two dataset: train and test
+get_balanced_dataset = function(data, balanced_gender=0, hard_balance = F){
+  
+  if (balanced_gender == 0){
+    
+    #Balance only wrt AGE GROUPS
+    a = subset(data, (age_groups == 1) & gender != 0)
+    b = subset(data, (age_groups == 2) & gender != 0)
+    c = subset(data, (age_groups == 3) & gender != 0)
+    d = subset(data, (age_groups == 4) & gender != 0)
+
+    ran = sample(1:nrow(d), 0.95 * nrow(d))
+    
+    a_s = a[ran,]
+    b_s = b[ran,]
+    c_s = c[ran,]
+    d_s = d[ran,]
+    
+    a = setdiff(a,a_s)
+    b = setdiff(b,b_s)
+    c = setdiff(c,c_s)
+    d = setdiff(d,d_s)
+    
+    ran_test = sample(1:nrow(d), 1 * nrow(d))
+    
+    a_t = a[ran_test,]
+    b_t = b[ran_test,]
+    c_t = c[ran_test,]
+    d_t = d[ran_test,]
+  
+    data_train = rbind(a_s, b_s, c_s, d_s)
+    data_test = rbind(a_t, b_t, c_t, d_t)
+    
+    rm(a,b,c,d, a_s, b_s, c_s, a_t, b_t, c_t)
+    
+    return(list(data_train, data_test))
+  
+  }else{
+    
+    if(hard_balance == T){
+      #Balance GENDER & AGE GROUPS
+      f = subset(data, gender == 2)
+      m = subset(data, gender == 1)
+      
+      gend = list(f,m)
+      
+      full_train = vector(mode='list', length=2)
+      full_test = vector(mode='list', length=2) 
+      
+      
+      for (i in (1:length(gend))){
+        
+        if (i == 1){
+          perc = list(0.05, 0.1, 0.3, 1)
+        }else{
+          perc = list(0.02, 0.02, 0.1, 0.4)
+        }
+        
+        a = subset(as.data.frame(gend[[i]]), (age_groups == 1))
+        full_a = sample_sub(a, perc[1])
+        
+        b = subset(as.data.frame(gend[[i]]), (age_groups == 2))
+        full_b = sample_sub(b, perc[2])
+        
+        c = subset(as.data.frame(gend[[i]]), (age_groups == 3))
+        full_c = sample_sub(c, perc[3])
+        
+        d = subset(as.data.frame(gend[[i]]), (age_groups == 4))
+        full_d = sample_sub(d, perc[4])
+        
+        data_train = rbind(full_a[[1]], full_b[[1]], full_c[[1]], full_d[[1]])
+        data_test = rbind(full_a[[2]], full_b[[2]], full_c[[2]], full_d[[2]])
+      
+        full_train[[i]] = data_train
+        full_test[[i]] = data_test
+        
+      }   
+      
+      data_train = as.data.frame(rbind(full_train[[1]], full_train[[2]]))
+      data_test = as.data.frame(rbind(full_test[[1]], full_test[[2]]))
+
+      rm(full_a, full_b, full_c, full_d, full_train, full_test)
+      
+      return(list(data_train, data_test))    
+      
+    }else{
+          m = subset(data, gender == 1)
+          f = subset(data, gender == 2)
+          
+          ran = sample(1:nrow(f), 0.95 * nrow(f))
+          m_s = m[ran,]
+          f_s = f[ran,]
+          
+          m = setdiff(m,m_s)
+          f = setdiff(f,f_s)
+          
+          ran_test = sample(1:nrow(f), 1 * nrow(f))
+          
+          f_t = f[ran_test,]
+          m_t = m[ran_test,]
+        
+          data_train = rbind(f_s, m_s)
+          data_test = rbind(f_t, m_t)
+          
+          rm(f,m,f_s, m_s, f_t, m_t)
+          return(list(data_train, data_test))
+    }
+  }
+}
+
+table_gender_age <- function(train, test){
+  cat("TAB TRAIN")
+  print(table(train$gender, train$age_groups))
+  
+  cat("\n", "TAB TEST")
+  print(table(test$gender, test$age_groups))
+}
+
+
 
 # ++++++++++++++++++++++++++++
 # flattenCorrMatrix
@@ -109,255 +191,86 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
     file.copy(file.path(current_path, file_name), html_file)
     rstudioapi::viewer(html_file)
 }
+
+plot_stats <- function(tab, mode="test", cf=F){
+  
+  cat("\n", "---------", mode, "---------", "\n")
+  
+  cat("\nAccuracy: ", round(accuracy(tab),2))
+  cat("\nPrecision: ", round(precision(tab),2))
+  cat("\nRecall: ", round(recall(tab),2), "\n")
+  
+  if(cf == T){
+      cat("\n", "---------", "CF", "---------", "\n")
+      tab
+  }
+
+}
+
+
+our_palette = c(rgb(1, 0, 0), 
+              rgb(0, 1, 0), 
+              rgb(0, 0, 1), 
+              rgb(1, 0.5, 0))
+
 ```
 
 ```{r}
-tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
-tripdata_2020_r$age_groups = 0
+tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+```
 
-#split_ages = c(16, 25, 35, 45, 55, 65, 75, 80)
-split_ages = c(16, 30, 45, 65)
-
+```{r}
 cat("min age:", min(tripdata_2020_r$age))
 cat("\nmax age:", max(tripdata_2020_r$age))
-cat("\nusers >60y:", nrow(tripdata_2020_r[tripdata_2020_r$age > 65,]))
-cat("\nusers = 0y:", nrow(tripdata_2020_r[tripdata_2020_r$age == 0,]))
-cat("\nusers >0 & <= 60:", nrow(tripdata_2020_r[tripdata_2020_r$age <= 65 & tripdata_2020_r$age > 0,]))
-
-
-
-sub_data = tripdata_2020_r[tripdata_2020_r$age <= 65,]
-sub_data$age_groups = cut(sub_data$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
-
-
-
-data = subset(sub_data, select = -c(year, 
-                                    birth.year, 
-                                    #startday, 
-                                    stopday,
-                                    #end.station.id,  
-                                    #start.station.id, 
-                                    #start.station.name,
-                                    #start.station.latitude, 
-                                    #start.station.longitude, 
-                                    #end.station.name,
-                                    #end.station.latitude, 
-                                    #end.station.longitude,
-                                    age,
-                                    gender))
-
-
-data$tripduration = round(data$tripduration/60,2)
-data$starttime = round(data$starttime/60,2)
-data$stoptime = round(data$stoptime/60,2)
-
-data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
-
-a = subset(data, (age_groups == 1))
-b = subset(data, (age_groups == 2))
-c = subset(data, (age_groups == 3))
-
-##Generate a random number that is 90% of the total number of rows in dataset.
-ran = sample(1:nrow(c), 10000) 
-##extract training set
-a_s = a[ran,]
-b_s = b[ran,]
-c_s = c[ran,]
-
-a = setdiff(a,a_s)
-b = setdiff(b,b_s)
-c = setdiff(c,c_s)
-
-ran = sample(1:nrow(c), 1000) 
-##extract test set
-a_t = a[ran,]
-b_t = b[ran,]
-c_t = c[ran,]
-
-
-data_train = as.data.frame(rbind(a_s, b_s, c_s))
-data_test = as.data.frame(rbind(a_t, b_t, c_t))
-
-labels_train = data_train$age_groups
-labels_test = data_test$age_groups
-
-data_train_a = subset(data_train, select = -c(age_groups))
-data_test_a = subset(data_test, select = -c(age_groups))
-
-
-
-full = get_balanced_dataset(data, w_gender = 0)
-data_train = as.data.frame(full[1])
-data_test = as.data.frame(full[2])
-
-labels_train = data_train$age_groups
-labels_test = data_test$age_groups
-
-data_train = subset(data_train, select = -c(age_groups))
-data_test = subset(data_test, select = -c(age_groups))
-
-
-data_train = data_train[1:500000,]
-labels_train = labels_train[1:500000]
-classifier_RF = randomForest(x = data_train,
-                             y = as.factor(labels_train),
-                             ntree = 100)
-
-
-# Predicting the Test set results
-y_pred = predict(classifier_RF, newdata = data_test)
-  
-# Confusion Matrix
-confusion_mtx = table(y_pred, labels_test)
-confusion_mtx
-
-# Plotting model
-plot(classifier_RF)
-  
-# Importance plot
-importance(classifier_RF)
-  
-# Variable importance plot
-varImpPlot(classifier_RF)
-
-cat("Accuracy: ", round(accuracy(confusion_mtx),2))
-cat("\nPrecision: ", round(precision(confusion_mtx),2))
-cat("\nRecall: ", round(recall(confusion_mtx),2))
-
-
-
-
+cat("\nusers >85y:", nrow(tripdata_2020_r[tripdata_2020_r$age > 85,]))
+cat("\nusers <=85:", nrow(tripdata_2020_r[tripdata_2020_r$age <= 85 & tripdata_2020_r$age > 0,]))
 ```
-
-```{r}
-table(tripdata_2020_r$month)
-
-for (i in 1:12){
-  print(nrow(tripdata_2020_r[tripdata_2020_r$month == i & tripdata_2020_r$age == 0,]))
-}
-```
-
-
-```{r}
-sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80 & tripdata_2020_r$age > 0,]
-sub_data$age_groups = cut(sub_data$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
-
-data = subset(sub_data, select = -c(year, 
-                                    birth.year, 
-                                    #startday, 
-                                    stopday,
-                                    #end.station.id,  
-                                    #start.station.id, 
-                                    start.station.name,
-                                    #start.station.latitude, 
-                                    #start.station.longitude, 
-                                    end.station.name,
-                                    #end.station.latitude, 
-                                    #end.station.longitude,
-                                    age))
-
-set.seed(42)
-
-full = get_balanced_dataset(data, w_gender = 0)
-data_train = as.data.frame(full[1])
-data_test = as.data.frame(full[2])
-
-labels_train = data_train$age_groups
-labels_test = data_test$age_groups
-
-data_train = subset(data_train, select = -c(gender, age_groups))
-data_test = subset(data_test, select = -c(gender, age_groups)) #gender? perchè lo togliamo?
-
-
-classifier_RF = randomForest(x = data_train,
-                             y = as.factor(labels_train),
-                             ntree = 100)
-
-# Predicting the Test set results
-y_pred = predict(classifier_RF, newdata = data_test)
-  
-# Confusion Matrix
-confusion_mtx = table(y_pred, labels_test)
-confusion_mtx
-
-cat("Accuracy: ", round(accuracy(confusion_mtx),2))
-cat("\nPrecision: ", round(precision(confusion_mtx),2))
-cat("\nRecall: ", round(recall(confusion_mtx),2))
-
-#96.66 acc avg. >93% acc on each class
-```
-
-
-#Let's try to predict the 0-age  and >80 age
-```{r}
-################# == 0 ################
-
-sub_data_0 = tripdata_2020_r[tripdata_2020_r$age == 0,]
-
-discover = subset(sub_data_0, select = -c(year, 
-                                          birth.year, 
-                                          #startday, 
-                                          stopday,
-                                          #end.station.id,  
-                                          #start.station.id, 
-                                          start.station.name,
-                                          #start.station.latitude, 
-                                          #start.station.longitude, 
-                                          end.station.name,
-                                          #end.station.latitude, 
-                                          #end.station.longitude,
-                                          age))
-
-dec_age = predict(classifier_RF, newdata = discover)
-
-table(as.data.frame(dec_age))
-
-tripdata_2020_r[tripdata_2020_r$age == 0,]$age_groups = dec_age
-
-
-################# >= 80 ################
-
-
-sub_data_80 = tripdata_2020_r[tripdata_2020_r$age >= 80,]
-
-discover = subset(sub_data_80, select = -c(year, 
-                                          birth.year, 
-                                          #startday, 
-                                          stopday,
-                                          #end.station.id,  
-                                          #start.station.id, 
-                                          start.station.name,
-                                          #start.station.latitude, 
-                                          #start.station.longitude, 
-                                          end.station.name,
-                                          #end.station.latitude, 
-                                          #end.station.longitude,
-                                          age))
-
-dec_age = predict(classifier_RF, newdata = discover)
-
-table(as.data.frame(dec_age))
-
-tripdata_2020_r[tripdata_2020_r$age >= 80,]$age_groups = dec_age
-
-
-################# fill all the other values normally #####################
-
-tripdata_2020_r[tripdata_2020_r$age <= 80 & tripdata_2020_r$age > 0,]$age_groups = sub_data$age_groups
-
-barplot(table(tripdata_2020_r$age_groups))
-```
-
-
-
 
 ```{r}
 par(mfrow=c(1,2))
 
-month_20 = table(tripdata_2020_r$month)
-a = as.data.frame(month_20)
+hist(tripdata_2020_r$age[tripdata_2020_r$age != 0], 
+     breaks = 20,
+     xlab = "Age",
+     main = "Age Histogram 2019")
 
-freq_month_20 = barplot(month_20, 
+
+dens = density(tripdata_2020_r$age[tripdata_2020_r$age != 0])
+plot(dens,main = "Age density 2019")
+```
+
+
+```{r}
+split_ages = c(16, 30, 45, 65, 85)
+
+data_u85 = tripdata_2020_r[tripdata_2020_r$age <= 85 & tripdata_2020_r$age > 0,]
+data_u85$age_groups = cut(data_u85$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
+
+data_o85 = tripdata_2020_r[tripdata_2020_r$age > 85 | tripdata_2020_r$age == 0,]
+
+data_u85 = subset(data_u85, select = -c(age, birth.year, year, start.station.name, end.station.name))
+data_o85 = subset(data_o85, select = -c(age, age_groups, birth.year, year, start.station.name, end.station.name))
+
+data_u85$tripduration = round(data_u85$tripduration/60,2)
+data_u85$starttime = round(data_u85$starttime/60,2)
+data_u85$stoptime = round(data_u85$stoptime/60,2)
+
+data_u85[c("tripduration", "starttime", "stoptime")] = lapply(data_u85[c("tripduration", "starttime", "stoptime")], nor)
+```
+
+```{r}
+barplot_age_group = barplot(table(data_u85$age_groups), 
+     main = "Age groups count",
+     xlab = "Age group",
+     ylab = "Freq",
+     col = "light Blue")
+```
+
+```{r}
+par(mfrow=c(1,2))
+
+
+freq_month_19 = barplot(table(tripdata_2020_r$month), 
      main = "Freq during months",
      xlab = "Months",
      ylab = "Freq",
@@ -378,74 +291,81 @@ min_per_month_20 = barplot(mean_dur_20,
      col = "light green",
      names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
 ```
+```{r}
 
+tab = table(tripdata_2020_r$gender, tripdata_2020_r$usertype)
+hist = barplot(tab, 
+        beside = TRUE, 
+        legend = FALSE,
+        main = "Gender and UserType",
+        xlab = "UserType",
+        ylab = "Freq",
+        ylim=c(0, max(tab) + 100000),
+        names.arg = c("Customer: 0", "Subscriber: 1"),
+        col = heat.colors(3))
+
+legend("topleft", legend = c("Unknown", "Male", "Female"),
+       fill = heat.colors(3))
+
+text(x = hist, y = tab + 50000, labels = tab, cex = .8)
+
+
+```
 
 ```{r}
-dates <- vector(mode="character", length=nrow(sub_data))
-for (i in 1:nrow(sub_data)){
-  dates[i] = paste(sub_data$year[i], sub_data$month[i], sub_data$startday[i], sep="-")
-}
-dates <- weekdays(as.Date(dates))
-sub_data$dayname = dates
+EDA_UT = subset(tripdata_2020_r, select = c(tripduration, usertype))
 
-tab = table(sub_data$dayname)
-barplot(tab)
+customer_dur = EDA_UT[EDA_UT$usertype == 0,]
+subscriber_dur = EDA_UT[EDA_UT$usertype == 1,]
+
+den_customer = density(log(customer_dur$tripduration))
+den_subscriber = density(log(subscriber_dur$tripduration))
+
+plot(den_customer, main="Customer vs Sub trip duration", col="red")
+lines(den_subscriber, col="green")
+
+legend("topright", 
+       legend = c("Customer", "Subscriber"),
+       fill = c("red", "green"))
+
+
+# Fill the areas
+polygon(den_customer, col = rgb(0.9, 0, 0, alpha = 0.6))
+polygon(den_subscriber, col = rgb(0, 0.9, 0, alpha = 0.6))
+```
+
+```{r}
+#FARE DI NUOVO DOPO LE PREDIZIONI
+c1 = density(data_u85[data_u85$age_groups == 1,]$month, adjust = 7)
+c2 = density(data_u85[data_u85$age_groups == 2,]$month, adjust = 7)
+c3 = density(data_u85[data_u85$age_groups == 3,]$month, adjust = 7)
+c4 = density(data_u85[data_u85$age_groups == 4,]$month, adjust = 3.5)
+
+plot(c1, xlim = c(1,12), main = "Age density over months", col = our_palette[1], lwd = 2)
+lines(c2, col = our_palette[2], lwd = 2)
+lines(c3, col = our_palette[3], lwd = 2)
+lines(c4, col = our_palette[4], lwd = 2)
+
+
+legend("topright", 
+       legend = c("Group 1: 16-30", "Group 2: 31-45", "Group 3: 46-65", "Group 4: 65+"),
+       fill = our_palette)
+```
+
+
+#Let's try to predict the 0-age  and >80 age
+```{r}
+################# == 0 ################
+dec_age = predict(rf_model, newdata = data_o85)
+
+table(as.data.frame(dec_age))
+
+data_o85$age_groups = dec_age
+
+data_age = rbind(data_u85, data_o85)
 ```
 
 #GENDER ASSUMER 2020
-```{r}
-data = subset(tripdata_2020_r, select = -c(year, 
-                                          birth.year, 
-                                          #startday, 
-                                          stopday,
-                                          #end.station.id,  
-                                          #start.station.id, 
-                                          start.station.name,
-                                          start.station.latitude, 
-                                          start.station.longitude, 
-                                          end.station.name,
-                                          end.station.latitude, 
-                                          end.station.longitude,
-                                          age))
-
-
-
-full = get_balanced_dataset(data, w_gender = 1)
-data_train = as.data.frame(full[1])
-data_test = as.data.frame(full[2])
-
-labels_train = data_train$gender
-labels_test = data_test$gender
-
-data_train = subset(data_train, select = -c(gender))
-data_test = subset(data_test, select = -c(gender))
-
-
-classifier_RF = randomForest(x = data_train,
-                             y = as.factor(labels_train),
-                             ntree = 100)
-
-
-# Predicting the Test set results
-y_pred = predict(classifier_RF, newdata = data_test)
-  
-# Confusion Matrix
-confusion_mtx = table(y_pred, labels_test)
-confusion_mtx
-
-# Plotting model
-plot(classifier_RF)
-  
-# Importance plot
-importance(classifier_RF)
-  
-# Variable importance plot
-varImpPlot(classifier_RF)
-
-cat("Accuracy: ", round(accuracy(confusion_mtx),2))
-cat("\nPrecision: ", round(precision(confusion_mtx),2))
-cat("\nRecall: ", round(recall(confusion_mtx),2))
-```
 
 ```{r}
 pred_dataset = subset(tripdata_2020_r, select = -c(year, 
@@ -471,354 +391,6 @@ table(y_gender)
 
 tripdata_2020_r$gender[tripdata_2020_r$gender == 0] = y_gender
 ```
-
-
-```{r}
-boxplot(tripdata_2020_r$age)
-```
-
-```{r}
-X = subset(sub_data, select = c(tripduration, starttime, startday, month, start.station.id, end.station.id))
-
-#our Y
-age_groups = cut(sub_data$age, breaks=c(16, 25, 35, 45, 55, 65, 75, 80), right = FALSE, labels = FALSE)
-```
-
-
-```{r}
-model = lm(age_groups~., data=X)
-summary(model)
-```
-
-```{r}
-model = lm(age_groups~tripduration + starttime + month + end.station.id, data=X)
-summary(model)
-```
-
-
-```{r}
-sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
-#our Y
-age_groups = cut(sub_data$age, breaks=c(16, 25, 35, 45, 55, 65, 75, 80), right = FALSE, labels = FALSE)
-
-#questo sembra essere il subset migliore
-model = lm(age_groups~. -year -birth.year -age -startday -end.station.id -stopday -start.station.id -bikeid -tripduration, data=sub_data)
-summary(model)
-```
-
-```{r}
-#confidence intervals
-confint(model)
-```
-
-I mean, siamo passati dallo spiegare lo 0.08% della varianza al 2.4%, ma non so se sia la strada giusta
-
-```{r}
-mod = augment(model)
-
-qqnorm(mod$.resid)
-qqline(mod$.resid)
-```
-
-```{r}
-plot(fitted(model), residuals(model), col="gray40", xlab="fitted values", ylab="residuals")
-lines(loess.smooth(fitted(model), residuals(model)), col="blue", lwd=2)
-```
-
-```{r}
-ggpairs(X)
-```
-
--------------------------------------------------------------------------------------------------------------------------------------------
-
-```{r}
-sub_data = subset(sub_data, select = -c(year, birth.year, start.station.name, end.station.name))
-round(var(sub_data),2)
-res2<-rcorr(as.matrix(sub_data))
-a = as.data.frame(flattenCorrMatrix(res2$r, res2$P))
-```
-
-```{r}
-corrplot(cor(sub_data), type = "upper", order = "hclust", 
-         tl.col = "black", tl.srt = 45)
-```
-
-```{r}
-par(mfrow=c(1,2))
-plot(sub_data$start.station.longitude, sub_data$end.station.longitude)
-plot(sub_data$start.station.latitude, sub_data$end.station.latitude)
-
-```
-
-```{r}
-plot(round(sub_data$starttime/3600,2), round(sub_data$stoptime/3600,2))
-```
-
-```{r}
-
-tab = table(sub_data$gender, sub_data$usertype)
-hist = barplot(tab, 
-        beside = TRUE, 
-        legend = FALSE,
-        main = "Gender and UserType",
-        xlab = "UserType",
-        ylab = "Freq",
-        ylim=c(0, max(tab) + 100000),
-        names.arg = c("Customer: 0", "Subscriber: 1"),
-        col = heat.colors(3))
-
-legend("topleft", legend = c("Unknown", "Male", "Female"),
-       fill = heat.colors(3))
-
-text(x = hist, y = tab + 50000, labels = tab, cex = .8)
-
-
-```
-
-EDA userType / tripduration
-
-```{r}
-EDA_UT = subset(sub_data, select = c(tripduration, usertype))
-
-customer_dur = EDA_UT[EDA_UT$usertype == 0,]
-customer_dur = subset(customer_dur, select = -c(usertype))
-
-subscriber_dur = EDA_UT[EDA_UT$usertype == 1,]
-subscriber_dur = subset(subscriber_dur, select = -c(usertype))
-
-par(mfrow=c(1,2))
-
-plot(density(log(customer_dur$tripduration)), main="log customer trip duration")
-plot(density(log(subscriber_dur$tripduration)), main="log subscriber trip duration")
-```
-
-
-```{r}
-par(mfrow=c(1,2))
-hist(labels_train, probability = TRUE)
-plot(density(tripdata_2020_r$age[tripdata_2020_r$age <= 80]), main = "Distribution of ages")
-```
-
-```{r}
-tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
-sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
-rm(tripdata_2020_r)
-
-data = subset(sub_data, select = -c(year, 
-                                    birth.year, 
-                                    #startday, 
-                                    stopday,
-                                    start.station.name,  
-                                    start.station.id, 
-                                    start.station.latitude, 
-                                    start.station.longitude, 
-                                    end.station.name,
-                                    end.station.id,
-                                    end.station.latitude, 
-                                    end.station.longitude))
-
-
-
-data$tripduration = round(data$tripduration/60,2)
-data$starttime = round(data$starttime/60,2)
-data$stoptime = round(data$stoptime/60,2)
-
-data[c("tripduration", "starttime", "stoptime")] = lapply(data[c("tripduration", "starttime", "stoptime")], nor)
-
-
-##Generate a random number that is 90% of the total number of rows in dataset.
-ran = sample(1:nrow(data), 0.2 * nrow(data)) 
-##extract training set
-data_train = data[ran,] 
-
-ran_test = sample(1:nrow(data_train), 0.05 * nrow(data_train)) 
-##extract testing set
-data_test = data_train[ran_test,] 
-
-#our Y
-labels_train = cut(data_train$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
-labels_test = cut(data_test$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
-
-
-data_train = subset(data_train, select = -c(age, gender))
-data_test = subset(data_test, select = -c(age, gender))
-
-
-##run knn function
-pr = knn(data_train, data_test, cl=labels_train, k=10)
-
-##create confusion matrix
-tab = table(pr, labels_test)
-
-
-cat("Accuracy: ", round(accuracy(tab),2))
-cat("\nPrecision: ", round(precision(tab),2))
-cat("\nRecall: ", round(recall(tab),2))
-
-```
-
-```{r}
-tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
-unknown = tripdata_2020_r[tripdata_2020_r$age > 80,]
-
-un_data = subset(unknown, select = -c(year, 
-                                    birth.year, 
-                                    #startday, 
-                                    stopday,
-                                    start.station.name,
-                                    start.station.id, 
-                                    start.station.latitude, 
-                                    start.station.longitude, 
-                                    end.station.name,
-                                    end.station.id, 
-                                    end.station.latitude, 
-                                    end.station.longitude,
-                                    age,
-                                    gender))
-
-
-
-un_data$tripduration = round(un_data$tripduration/60,2)
-un_data$starttime = round(un_data$starttime/60,2)
-un_data$stoptime = round(un_data$stoptime/60,2)
-
-un_data[c("tripduration", "starttime", "stoptime")] = lapply(un_data[c("tripduration", "starttime", "stoptime")], nor)
-
-
-##run knn function
-pr_un_data = knn(data_train, un_data, cl=labels_train, k=10)
-```
-
-```{r}
-old_method = pr_un_data
-table(old_method)
-```
-
-```{r}
-new_method = pr_un_data
-table(new_method)
-```
-
-```{r}
-tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
-sub_data = tripdata_2020_r[tripdata_2020_r$age <= 80,]
-rm(tripdata_2020_r)
-
-data = subset(sub_data, select = -c(year, 
-                                    birth.year, 
-                                    #startday, 
-                                    stopday,
-                                    #end.station.id,  
-                                    #start.station.id, 
-                                    start.station.name,
-                                    start.station.latitude, 
-                                    start.station.longitude, 
-                                    end.station.name,
-                                    end.station.latitude, 
-                                    end.station.longitude))
-
-
-full = get_balanced_dataset(data, w_gender = 0)
-data_train = as.data.frame(full[1])
-data_test = as.data.frame(full[2])
-
-#our Y
-labels_train = cut(data_train$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
-labels_test = cut(data_test$age, breaks=c(16, 29, 39, 59, 80), include.lowest = TRUE, labels = FALSE)
-
-data_train = subset(data_train, select = -c(age, gender))
-data_test = subset(data_test, select = -c(age, gender)) #gender? perchè lo togliamo?
-
-
-##run knn function
-pr = knn(data_train, data_test, cl=labels_train, k=10)
-
-##create confusion matrix
-tab = table(pr, labels_test)
-
-cat("Accuracy: ", round(accuracy(tab),2))
-cat("\nPrecision: ", round(precision(tab),2))
-cat("\nRecall: ", round(recall(tab),2))
-
-```
-
-```{r}
-# Fit the model
-model = nnet::multinom(labels_train ~., data = data_train)
-```
-
-```{r}
-# Make predictions
-predicted.classes = model %>% predict(data_test)
-# Model accuracy
-mean(predicted.classes == labels_test)
-```
-
-```{r}
-classifier_RF = randomForest(x = data_train,
-                             y = as.factor(labels_train),
-                             ntree = 100)
-```
-
-```{r}
-# Predicting the Test set results
-y_pred = predict(classifier_RF, newdata = data_test)
-  
-# Confusion Matrix
-confusion_mtx = table(y_pred, labels_test)
-confusion_mtx
-```
-
-```{r}
-# Plotting model
-plot(classifier_RF)
-  
-# Importance plot
-importance(classifier_RF)
-  
-# Variable importance plot
-varImpPlot(classifier_RF)
-```
-
-```{r}
-cat("Accuracy: ", round(accuracy(confusion_mtx),2))
-cat("\nPrecision: ", round(precision(confusion_mtx),2))
-cat("\nRecall: ", round(recall(confusion_mtx),2))
-```
-
-```{r}
-rocs = multiclass.roc(as.numeric(labels_test), as.numeric(y_pred))
-rs = rocs[["rocs"]]
-plot.roc(rs[[1]])
-sapply(2:length(rs),function(i) lines.roc(rs[[i]],col=i))
-```
-
-```{r}
-data$age = cut(data$age, breaks=c(16, 30, 40, 60, 80), include.lowest = TRUE, labels = FALSE)
-```
-
-```{r}
-our_palette = c(rgb(1, 0, 0), 
-              rgb(0, 1, 0), 
-              rgb(0, 0, 1), 
-              rgb(1, 0.5, 0))
-
-c1 = density(data[data$age==1,]$month, adjust = 3.5)
-c2 = density(data[data$age==2,]$month, adjust = 3.5)
-c3 = density(data[data$age==3,]$month, adjust = 3.5)
-c4 = density(data[data$age==4,]$month, adjust = 3.5)
-
-plot(c1, xlim = c(1,12), main = "Age density over months", col = our_palette[1], lwd = 2)
-lines(c2, col = our_palette[2], lwd = 2)
-lines(c3, col = our_palette[3], lwd = 2)
-lines(c4, col = our_palette[4], lwd = 2)
-
-
-legend("topleft", 
-       legend = c("16-29", "30-39", "40-59", "60-80"),
-       fill = our_palette)
-```
-
 
 ```{r}
 data = subset(tripdata_2020_r, select = c(age_groups,
