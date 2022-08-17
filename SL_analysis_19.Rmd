@@ -164,6 +164,63 @@ get_balanced_dataset = function(data, balanced_gender=0, hard_balance = F){
   }
 }
 
+
+
+
+
+#New version of the dataset gen function
+#data: dataset to be splitted
+#perc_m/f: list of 4 values
+get_balanced_v2 <- function(data, perc_m, perc_f){
+  
+    #Balance GENDER & AGE GROUPS
+    f = subset(data, gender == 2)
+    m = subset(data, gender == 1)
+    
+    gend = list(f,m)
+    
+    full_train = vector(mode='list', length=2)
+    full_test = vector(mode='list', length=2)
+    
+    for (i in (1:length(gend))){
+      
+      if (i == 1){
+        perc = perc_f
+      }else{
+        perc = perc_m
+      }
+      
+      a = subset(as.data.frame(gend[[i]]), (age_groups == 1))
+      full_a = sample_sub(a, perc[1])
+      
+      b = subset(as.data.frame(gend[[i]]), (age_groups == 2))
+      full_b = sample_sub(b, perc[2])
+      
+      c = subset(as.data.frame(gend[[i]]), (age_groups == 3))
+      full_c = sample_sub(c, perc[3])
+      
+      d = subset(as.data.frame(gend[[i]]), (age_groups == 4))
+      full_d = sample_sub(d, perc[4])
+      
+      data_train = rbind(full_a[[1]], full_b[[1]], full_c[[1]], full_d[[1]])
+      data_test = rbind(full_a[[2]], full_b[[2]], full_c[[2]], full_d[[2]])
+    
+      full_train[[i]] = data_train
+      full_test[[i]] = data_test
+      
+    }   
+    
+    data_train = as.data.frame(rbind(full_train[[1]], full_train[[2]]))
+    data_test = as.data.frame(rbind(full_test[[1]], full_test[[2]]))
+  
+    rm(full_a, full_b, full_c, full_d, full_train, full_test, a, b, c, d, f, m, gend)
+    
+    return(list(data_train, data_test)) 
+  
+}
+
+
+
 table_gender_age <- function(train, test){
   cat("TAB TRAIN")
   print(table(train$gender, train$age_groups))
@@ -227,11 +284,9 @@ our_palette = c(rgb(1, 0, 0),
 
 ```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
+tripdata_2019_r = tripdata_2019_r[sample(1:nrow(tripdata_2019_r)),]
 ```
 
-```{r}
- tripdata_2019_r = tripdata_2019_r[sample(1:nrow(tripdata_2019_r)), ]
-```
 
 ```{r}
 cat("min age:", min(tripdata_2019_r$age))
@@ -504,44 +559,20 @@ plot_stats(tab_test_knn, cf = T)
 
 ```
 
-```{r}
-m = subset(data_u85, gender == 1)
-f = subset(data_u85, gender == 2)
-
-a = subset(m, age_groups == 1)
-full_a = sample_sub(a,0.5)
-
-b = subset(m, age_groups == 2)
-full_b = sample_sub(b, 0.5)
-
-c = subset(m, age_groups == 3)
-full_c = sample_sub(c, 0.5)
-
-d = subset(m, age_groups == 4)
-full_d = sample_sub(d, 0.5)
-
-data_train = rbind(full_a[[1]], full_b[[1]], full_c[[1]], full_d[[1]])
-data_test = rbind(full_a[[2]], full_b[[2]], full_c[[2]], full_d[[2]])
-
-data_train_m = rbind(full_a[[1]], full_b[[1]], full_c[[1]], full_d[[1]])
-data_test_m = rbind(full_a[[2]], full_b[[2]], full_c[[2]], full_d[[2]])
-
-data_train = rbind(data_train, data_train_m)
-data_test = rbind(data_test, data_test_m)
-
-rm(full_a, full_b, full_c, full_d, data_train_m, data_test_m, a, b, c, d)
-```
-
-```{r}
-table_gender_age(data_train, data_test)
-```
 
 ```{r}
 
 ################### RANDOM FOREST ##########################
 
-data_train = as.data.frame(full[1])
-data_test = as.data.frame(full[2])
+#data_train = as.data.frame(full[1])
+#data_test = as.data.frame(full[2])
+
+perc_m = c(0.3, 0.4, 0.5, 0.5)
+perc_f = c(0.7, 0.8, 1, 1)
+full = get_balanced_v2(data_u85, perc_m, perc_f)
+
+data_train = full[[1]]
+data_test = full[[2]]
 
 #our Y
 labels_train = data_train$age_groups
