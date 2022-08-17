@@ -230,6 +230,10 @@ tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 ```
 
 ```{r}
+ tripdata_2019_r = tripdata_2019_r[sample(1:nrow(tripdata_2019_r)), ]
+```
+
+```{r}
 cat("min age:", min(tripdata_2019_r$age))
 cat("\nmax age:", max(tripdata_2019_r$age))
 cat("\nusers >85y:", nrow(tripdata_2019_r[tripdata_2019_r$age > 85,]))
@@ -264,7 +268,7 @@ data_u85$tripduration = round(data_u85$tripduration/60,2)
 data_u85$starttime = round(data_u85$starttime/60,2)
 data_u85$stoptime = round(data_u85$stoptime/60,2)
 
-data_u85[c("tripduration", "starttime", "stoptime")] = lapply(data_u85[c("tripduration", "starttime", "stoptime")], nor)
+data_u85[c("starttime", "stoptime")] = lapply(data_u85[c("starttime", "stoptime")], nor)
 ```
 
 ```{r}
@@ -501,6 +505,38 @@ plot_stats(tab_test_knn, cf = T)
 ```
 
 ```{r}
+m = subset(data_u85, gender == 1)
+f = subset(data_u85, gender == 2)
+
+a = subset(m, age_groups == 1)
+full_a = sample_sub(a,0.5)
+
+b = subset(m, age_groups == 2)
+full_b = sample_sub(b, 0.5)
+
+c = subset(m, age_groups == 3)
+full_c = sample_sub(c, 0.5)
+
+d = subset(m, age_groups == 4)
+full_d = sample_sub(d, 0.5)
+
+data_train = rbind(full_a[[1]], full_b[[1]], full_c[[1]], full_d[[1]])
+data_test = rbind(full_a[[2]], full_b[[2]], full_c[[2]], full_d[[2]])
+
+data_train_m = rbind(full_a[[1]], full_b[[1]], full_c[[1]], full_d[[1]])
+data_test_m = rbind(full_a[[2]], full_b[[2]], full_c[[2]], full_d[[2]])
+
+data_train = rbind(data_train, data_train_m)
+data_test = rbind(data_test, data_test_m)
+
+rm(full_a, full_b, full_c, full_d, data_train_m, data_test_m, a, b, c, d)
+```
+
+```{r}
+table_gender_age(data_train, data_test)
+```
+
+```{r}
 
 ################### RANDOM FOREST ##########################
 
@@ -535,12 +571,28 @@ plot_stats(tab_test_rf, mode="test", cf = T)
 varImpPlot(rf_model)
 
 ```
+```{r}
+saveRDS(rf_model, "rf.rda")
+```
 
 ```{r}
 rocs = multiclass.roc(as.numeric(labels_test), as.numeric(rf_model_pred))
 rs = rocs[["rocs"]]
 plot.roc(rs[[1]])
 sapply(2:length(rs),function(i) lines.roc(rs[[i]],col=i))
+```
+
+```{r}
+data_train$age_groups = labels_train
+data_test$age_groups = labels_test
+
+new = setdiff(data_u85, data_train)
+new = setdiff(new, data_test)
+labels_new = new$age_groups
+
+pred = predict(rf_model, newdata = subset(new, select = -c(age_groups)))
+tab = table(pred, labels_new)
+plot_stats(tab, cf = T)
 ```
 
 ```{r}
