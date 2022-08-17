@@ -483,6 +483,12 @@ barplot(tab)
 # ############################# AGE GROUPS ######################################
 
 ```{r}
+perc_m = c(0.3, 0.4, 0.5, 0.5)
+perc_f = c(0.7, 0.8, 1, 1)
+```
+
+
+```{r}
 ####### BACKW FEATURE SELECTION ###################
 
 full = get_balanced_dataset(corr_data, balanced_gender = 0)
@@ -512,6 +518,14 @@ plot(results, type=c("g", "o"))
 	10	    0.7562    	0.6750    	0.003129    	0.004171	
 	15    	0.7964    	0.7285    	0.003826    	0.005100	
 
+```{r}
+table_gender_age(data_train, data_test)
+```
+
+```{r}
+table_gender_age(data_train, data_test)
+```
+
 
 ```{r}
 ####### MULTINOMIAL LOGISTIC REGRESSION ###################
@@ -519,6 +533,10 @@ plot(results, type=c("g", "o"))
 full = get_balanced_dataset(data_u85, balanced_gender = 0)
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
+
+full = get_balanced_v2(data_u85, perc_m, perc_f)
+data_train = full[[1]]
+data_test = full[[2]]
 
 # Fit the model
 multinom_age_model = multinom(age_groups ~., data = data_train)
@@ -533,6 +551,15 @@ pred = predict(multinom_age_model, newdata = data_test)
 tab_test_mlr = table(pred, data_test$age_groups)
 
 plot_stats(tab_test_mlr, cf = T)
+```
+
+```{r}
+new = setdiff(data_u85, data_train)
+new = setdiff(new, data_test)
+
+pred = predict(multinom_age_model, newdata = subset(new, select = -c(age_groups)))
+tab = table(pred, new$age_groups)
+plot_stats(tab, cf = T)
 ```
 
 
@@ -561,16 +588,15 @@ plot_stats(tab_test_knn, cf = T)
 
 
 ```{r}
-
 ################### RANDOM FOREST ##########################
 
 #data_train = as.data.frame(full[1])
 #data_test = as.data.frame(full[2])
 
-perc_m = c(0.3, 0.4, 0.5, 0.5)
-perc_f = c(0.7, 0.8, 1, 1)
-full = get_balanced_v2(data_u85, perc_m, perc_f)
+perc_m = c(0.015, 0.02, 0.05, 0.8)
+perc_f = c(0.03, 0.07, 0.2, 1)
 
+full = get_balanced_v2(data_u85, perc_m, perc_f)
 data_train = full[[1]]
 data_test = full[[2]]
 
@@ -602,6 +628,7 @@ plot_stats(tab_test_rf, mode="test", cf = T)
 varImpPlot(rf_model)
 
 ```
+
 ```{r}
 saveRDS(rf_model, "rf.rda")
 ```
