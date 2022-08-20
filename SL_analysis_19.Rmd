@@ -7,6 +7,8 @@ library(GGally)
 library(class)
 library(Hmisc)
 library(corrplot)
+library(correlation)
+library(gridExtra)
 library(class)
 library(randomForest)
 library(mda)
@@ -200,6 +202,24 @@ get_perc <- function(mode = "full"){
 }
 
 
+cool_cf <- function(pred, true){
+  
+  cm <- confusionMatrix(factor(pred), factor(true), dnn = c("Prediction", "GroundT"))
+
+  plt <- as.data.frame(cm$table)
+  plt$Prediction <- factor(plt$Prediction, levels=rev(levels(plt$Prediction)))
+  
+  
+  ggplot(plt, aes(GroundT, Prediction, fill= Freq)) +
+          geom_tile() + geom_text(aes(label=Freq)) +
+          labs(x = "Ground T",y = "Prediction") +
+          scale_fill_gradient(low="white", high="#009194") +
+          scale_x_discrete(labels=c("Class_1","Class_2","Class_3","Class_4")) +
+          scale_y_discrete(labels=c("Class_4","Class_3","Class_2","Class_1"))
+  
+}
+
+
 ```
 
 
@@ -301,6 +321,11 @@ legend("topleft", legend = c("Unknown", "Male", "Female"),
 text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
 
+cat("tot Male:", nrow(tripdata_2019_r[tripdata_2019_r$gender == 1,]))
+cat("\ntot Female:", nrow(tripdata_2019_r[tripdata_2019_r$gender == 2,]))
+cat("\ntot Unknown:", nrow(tripdata_2019_r[tripdata_2019_r$gender == 0,]))
+
+
 ```
 
 
@@ -354,28 +379,53 @@ round(var(corr_data),2)
 res<-rcorr(as.matrix(corr_data))
 a = as.data.frame(flattenCorrMatrix(res$r, res$P))
 
-corrplot(cor(corr_data), type = "upper", order = "hclust", 
-         tl.col = "black", tl.srt = 45)
+corrplot(cor(corr_data),
+         type = "upper",
+         order = "hclust", 
+         tl.col = "black",
+         tl.cex = 0.8,
+         number.cex = 0.6,
+         diag = FALSE,
+         method = "number",
+         tl.srt = 45)
 ```
 
 ```{r}
 # find attributes that are highly corrected (ideally >0.75)
-highlyCorrelated = findCorrelation(cor(corr_data), cutoff=0.75)
+highlyCorrelated = findCorrelation(cor(corr_data), cutoff=0.65, verbose = T, names = T)
 # print indexes of highly correlated attributes
 print(highlyCorrelated)
 ```
 
 ```{r}
-par(mfrow=c(1,2))
-plot(corr_data$start.station.longitude, corr_data$end.station.longitude)
-plot(corr_data$start.station.latitude, corr_data$end.station.latitude)
+percs = get_perc(mode = "50k")
+datas = get_balanced_v2(corr_data, percs[[1]], percs[[2]])
+corr_train = as.data.frame(datas[[1]])
+corr_test = as.data.frame(datas[[2]])
 
-plot(round(corr_data$starttime/3600,2), round(corr_data$stoptime/3600,2))
-
-plot(corr_data$startday, corr_data$stopday)
-
-plot(corr_data$age_groups, corr_data$gender)
+correlation(corr_train, partial = TRUE)
 ```
+
+```{r}
+#Pos Cor
+corr_1<- ggplot(corr_test, aes(startday, stopday)) + geom_jitter(color = "blue") + xlab("startday") + ylab("stopday")
+corr_2<- ggplot(corr_test, aes(starttime, stoptime)) + geom_jitter(color = "blue") + xlab("starttime") + ylab("stoptime")
+corr_7<- ggplot(corr_test, aes(usertype, gender)) + geom_jitter(color = "blue") + xlab("usertype") + ylab("gender")
+corr_3<- ggplot(corr_test, aes(start.station.longitude, start.station.latitude)) + geom_jitter(color = "blue") + xlab("ss_longitude") + ylab("ss_latitude")
+
+
+#Neg Cor
+corr_5<- ggplot(corr_test, aes(age_groups, gender)) + geom_jitter(color = "orange") + xlab("age_group") + ylab("gender")
+corr_6<- ggplot(corr_test, aes(age_groups, usertype)) + geom_jitter(color = "orange") + xlab("age_group") + ylab("usertype")
+
+
+grid.arrange(corr_1, corr_2, corr_7, corr_3, nrow = 2, ncol = 2)
+grid.arrange(corr_5, corr_6, nrow = 1, ncol = 2)
+
+```
+
+
+
 
 ```{r}
 dates <- vector(mode="character", length=nrow(data_u85))
@@ -491,6 +541,10 @@ tab_test_mlr = table(pred, data_test$age_groups)
 
 plot_stats(tab_test_mlr, cf = T)
 ```
+```{r}
+cool_cf(pred, data_test$age_groups)
+```
+
 
 ```{r}
 new = setdiff(data_u85, data_train)
