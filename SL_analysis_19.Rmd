@@ -275,7 +275,7 @@ barplot_age_group = barplot(table(data_u85$age_groups),
 ```
 `
 ```{r}
-par(mfrow=c(1,2))
+par(mfrow=c(2,2))
 
 
 freq_month_19 = barplot(table(data_u85$month), 
@@ -283,6 +283,13 @@ freq_month_19 = barplot(table(data_u85$month),
      xlab = "Months",
      ylab = "Freq",
      col = "light Blue")
+
+freq_age_month = barplot(table(data_u85$age_groups, data_u85$month),
+                         names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
+
+freq_age_month = barplot(table(tripdata_2019_r$usertype, tripdata_2019_r$month),
+                         names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"),
+                         beside = TRUE)
 
 
 mean_dur_19 = c()
@@ -504,7 +511,7 @@ predictors(results)
 # plot the results
 plot(results, type=c("g", "o"))
 
-#BEST FEATURE -> ALL - start.day, stop.day, bikeID (12)
+#BEST FEATURE -> ALL - startday, stopday, bikeid (12)
 
 ```
   nVar    accuracy    Kappa       AccuracySD    KappaSD
@@ -582,9 +589,14 @@ plot_stats(tab_test_knn, cf = T)
 
 percs = get_perc(mode = "10k")
 
+
 full = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
 data_train = full[[1]]
 data_test = full[[2]]
+
+data_train = subset(data_train, select=-c(gender,startday, stopday, bikeid))
+data_test = subset(data_test, select=-c(gender,startday, stopday, bikeid))
+
 
 #our Y
 labels_train = data_train$age_groups
@@ -616,7 +628,7 @@ varImpPlot(rf_model)
 ```
 
 ```{r}
-saveRDS(rf_model, "rf.rda")
+saveRDS(rf_model, "rf_best_ng_10.rda")
 ```
 
 ```{r}
@@ -629,6 +641,8 @@ sapply(2:length(rs),function(i) lines.roc(rs[[i]],col=i))
 ```{r}
 data_train$age_groups = labels_train
 data_test$age_groups = labels_test
+
+data_u85 = subset(data_u85, select=-c(gender,startday, stopday, bikeid))
 
 new = setdiff(data_u85, data_train)
 new = setdiff(new, data_test)

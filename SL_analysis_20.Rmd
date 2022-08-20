@@ -217,6 +217,8 @@ our_palette = c(rgb(1, 0, 0),
 
 ```{r}
 tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+tripdata_2020_r = tripdata_2020_r[sample(1:nrow(tripdata_2020_r)),]
+
 ```
 
 ```{r}
@@ -256,7 +258,7 @@ data_u85_20$tripduration = round(data_u85_20$tripduration/60,2)
 data_u85_20$starttime = round(data_u85_20$starttime/60,2)
 data_u85_20$stoptime = round(data_u85_20$stoptime/60,2)
 
-data_u85_20[c("tripduration", "starttime", "stoptime")] = lapply(data_u85_20[c("tripduration", "starttime", "stoptime")], nor)
+data_u85_20[c("starttime", "stoptime")] = lapply(data_u85_20[c("starttime", "stoptime")], nor)
 
 data_o85_20$tripduration = round(data_o85_20$tripduration/60,2)
 data_o85_20$starttime = round(data_o85_20$starttime/60,2)
@@ -284,6 +286,13 @@ freq_month_19 = barplot(table(tripdata_2020_r$month),
      ylab = "Freq",
      col = "light Blue")
 
+freq_age_month = barplot(table(tripdata_2020_r$gender, tripdata_2020_r$month),
+                         beside = TRUE)
+
+freq_age_month = barplot(table(tripdata_2020_r$usertype, tripdata_2020_r$month),
+                         names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"),
+                         beside = TRUE)
+
 
 mean_dur_20 = c()
 
@@ -300,6 +309,22 @@ min_per_month_20 = barplot(mean_dur_20,
      names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
 ```
 ```{r}
+t=table(tripdata_2020_r$usertype, tripdata_2020_r$month)
+s=colSums(t)
+for (i in 1:12){
+  t[2*i-1] = t[2*i-1]/s[i]
+  t[2*i] = t[2*i]/s[i]
+}
+barplot(t)
+
+t=table(tripdata_2020_r$usertype, tripdata_2020_r$month)
+s=sum(colSums(t))
+for (i in 1:12){
+  t[2*i-1] = t[2*i-1]/s
+  t[2*i] = t[2*i]/s
+}
+barplot(t)
+```
 
 tab = table(tripdata_2020_r$gender, tripdata_2020_r$usertype)
 hist = barplot(tab, 
@@ -352,23 +377,6 @@ lines(den_trip_p, col = our_palette[2], lwd = 2)
 ```
 
 ```{r}
-#FARE DI NUOVO DOPO LE PREDIZIONI
-c1 = density(data_u85_20[data_u85_20$age_groups == 1,]$month, adjust = 7)
-c2 = density(data_u85_20[data_u85_20$age_groups == 2,]$month, adjust = 7)
-c3 = density(data_u85_20[data_u85_20$age_groups == 3,]$month, adjust = 7)
-c4 = density(data_u85_20[data_u85_20$age_groups == 4,]$month, adjust = 3.5)
-
-plot(c1, xlim = c(1,12), main = "Age density over months", col = our_palette[1], lwd = 2)
-lines(c2, col = our_palette[2], lwd = 2)
-lines(c3, col = our_palette[3], lwd = 2)
-lines(c4, col = our_palette[4], lwd = 2)
-
-
-legend("topright", 
-       legend = c("Group 1: 16-30", "Group 2: 31-45", "Group 3: 46-65", "Group 4: 65+"),
-       fill = our_palette)
-```
-```{r}
 tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 ```
 
@@ -398,13 +406,17 @@ data_u85_20 = subset(data_u85_20, select = -c(gender))
 data_o85_20 = subset(data_o85_20, select = -c(gender))
 ```
 
+```{r}
+data_u85_20 = rbind(data_u85_20, data_u85)
+```
+
 
 #Let's try to predict the 0-age  and >80 age
 ```{r}
 ################# == 0 ################
 full = get_balanced_dataset(data_u85_20, balanced_gender = 0)
-data_train = as.data.frame(full[1])
-data_test = as.data.frame(full[2])
+data_train = data_u85_20[1:300000,]
+data_test = data_u85_20[300000:415849,]
 
 labels_train = data_train$age_groups
 labels_test = data_test$age_groups
@@ -422,7 +434,7 @@ rf_model_pred = predict(rf_model, newdata = data_test)
 
 # train resuls
 tab_train_rf = table(rf_model_pred_train, labels_train)
-plot_stats(tab_train_rf, mode="train", cf = F)
+plot_stats(tab_train_rf, mode="train", cf = T)
   
 # test result
 tab_test_rf = table(rf_model_pred, labels_test)
@@ -434,40 +446,58 @@ varImpPlot(rf_model)
 ```
 
 ```{r}
-dec_age = predict(rf_model, newdata = data_o85_20)
+data_o85_20 = subset(data_o85_20, selct = -c(stratday, stopday))
+data_u85_20 = subset(data_u85_20, selct = -c(stratday, stopday, age_groups))
 
-table(as.data.frame(dec_age))
+pred_o = predict(rf_model, newdata = subset(data_o85_20, select = -c(gender)))
 
-data_o85_20$age_groups = dec_age
+new = data_u85_20[data_u85_20$gender != 0,]
+label_new = new$gender
+new = subset(new, select = -c(gender))
+
+pred_u = predict(rf_model, newdata = new)
+
+table(pred_o)
+
+plot_stats(table(label_new, pred_u), cf = T)
+
+#data_o85_20$age_groups = dec_age
 
 #data_age = rbind(data_u85_20, data_o85_20)
+```
+```{r}
+barplot(table(dec_age))
+barplot(table(data_u85$age_groups))
+```
+```{r}
+#FARE DI NUOVO DOPO LE PREDIZIONI
+c1 = density(data_u85_20[data_u85_20$age_groups == 1,]$month, adjust = 7)
+c2 = density(data_u85_20[data_u85_20$age_groups == 2,]$month, adjust = 7)
+c3 = density(data_u85_20[data_u85_20$age_groups == 3,]$month, adjust = 7)
+c4 = density(data_u85_20[data_u85_20$age_groups == 4,]$month, adjust = 3.5)
+
+plot(c1, xlim = c(1,12), main = "Age density over months", col = our_palette[1], lwd = 2)
+lines(c2, col = our_palette[2], lwd = 2)
+lines(c3, col = our_palette[3], lwd = 2)
+lines(c4, col = our_palette[4], lwd = 2)
+
+
+legend("topright", 
+       legend = c("Group 1: 16-30", "Group 2: 31-45", "Group 3: 46-65", "Group 4: 65+"),
+       fill = our_palette)
 ```
 
 #GENDER ASSUMER 2020
 
 ```{r}
-pred_dataset = subset(tripdata_2020_r, select = -c(year, 
-                                                  birth.year, 
-                                                  #startday, 
-                                                  stopday,
-                                                  #end.station.id,  
-                                                  #start.station.id, 
-                                                  start.station.name,
-                                                  start.station.latitude, 
-                                                  start.station.longitude, 
-                                                  end.station.name,
-                                                  end.station.latitude, 
-                                                  end.station.longitude,
-                                                  age))
+data_no_gender = data_age[data_age$gender == 0]
+data_gender = data_age[data_age$gender != 0]
 
-
-
-pred_dataset = pred_dataset[pred_dataset$gender == 0,]
-y_gender = predict(classifier_RF, newdata = pred_dataset[,-10])
+y_gender = predict(rf_model, newdata = pred_dataset[,-10])
 
 table(y_gender)
 
-tripdata_2020_r$gender[tripdata_2020_r$gender == 0] = y_gender
+data_f = rbind(data_gender, data_no_gender)
 ```
 
 ```{r}
