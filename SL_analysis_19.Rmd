@@ -228,6 +228,10 @@ tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 tripdata_2019_r = tripdata_2019_r[sample(1:nrow(tripdata_2019_r)),]
 ```
 
+```{r}
+summary(tripdata_2019_r)
+```
+
 
 
 ```{r}
@@ -765,75 +769,6 @@ barplot_acc_model = barplot(tab_accuracy_models$vec_acc_model,
 percs = get_perc(mode = "10k")
 
 one = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
-data_train_one = as.data.frame(one[[1]])
-data_test = setdiff(data_u85, data_train_one)
-
-
-library(h2o)
-rm(tripdata_2019_r, data_o85, one)
-data_test = data_test[sample(1:nrow(data_test), 0.3*nrow(data_test)),]
-rm(tripdata_2019_r, data_o85, one)
-
-
-h2o.init()
-data_train_one$age_groups = as.factor(data_train_one$age_groups)
-
-train_df_h2o<-as.h2o(data_train_one)
-test_df_h2o<-as.h2o(data_test)
-
-y <- "age_groups"
-x <- setdiff(names(train_df_h2o), y)
-
-
-nfolds <- 3
-
-# Train & Cross-validate a RF
-my_rf <- h2o.randomForest(x = x,
-                          y = y,
-                          training_frame = train_df_h2o,
-                          nfolds = nfolds,
-                          ntrees = 10,
-                          keep_cross_validation_predictions = TRUE,
-                          seed = 42)
-
-
-# Train & Cross-validate a RF
-my_rf2 <- h2o.randomForest(x = x,
-                          y = y,
-                          training_frame = train_df_h2o,
-                          nfolds = nfolds,
-                          keep_cross_validation_predictions = TRUE,
-                          seed = 42,
-                          ntrees = 5)
-
-
-
-# Train a stacked random forest ensemble using the GBM, RF and LR above
-ensemble <- h2o.stackedEnsemble(x = x,
-                                y = y,
-                                metalearner_algorithm="drf",
-                                training_frame = train_df_h2o,
-                                base_models = list(my_rf, my_rf2))
-
-# Eval ensemble performance on a test set
-perf <- h2o.performance(ensemble, newdata = test_df_h2o)
-
-
-# Compare to base learner performance on the test set
-perf_rf_test <- h2o.performance(my_rf, newdata = test_df_h2o)
-perf_rf2_test <- h2o.performance(my_rf2, newdata = test_df_h2o)
-
-h2o.confusionMatrix(my_rf)
-h2o.confusionMatrix(my_rf2)
-h2o.confusionMatrix(perf)
-
-```
-
-
-```{r}
-percs = get_perc(mode = "10k")
-
-one = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
 data_train = as.data.frame(one[[1]])
 data_test = as.data.frame(one[[2]])
 
@@ -857,7 +792,30 @@ data_train = subset(data_train, select = -c(age_groups))
 
 rf_model_two = randomForest(x = data_train,
                             y = as.factor(labels_train),
-                            ntree = 100)
+                            ntree = 100,
+                            xtest = data_train,
+                            ytest = as.factor(labels_train),
+                            keep.forest = TRUE)
+
+prob=predict(rf_model_two, data_train, type="prob")
+prob
+
+
+df_prob = as.data.frame(prob)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -874,7 +832,7 @@ rf_model_three = randomForest(x = data_train_three,
 
 ####### PREDICT #########
 pred_1 = predict(rf_model_one, newdata = subset(data_test, select = -c(age_groups)))
-pred_2 = predict(rf_model_two, newdata = data_test)
+pred_2 = predict(rf_model_two, newdata = subset(data_test, select = -c(age_groups)))
 pred_3 = predict(rf_model_three, newdata = data_test)
 
 a = as.data.frame(pred_1)
