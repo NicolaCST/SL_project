@@ -11,6 +11,7 @@ library(class)
 library(randomForest)
 library(mda)
 library(klaR)
+library(car)
 ```
 
 ```{r}
@@ -279,54 +280,129 @@ barplot_age_group = barplot(table(data_u85_20$age_groups),
 ```{r}
 par(mfrow=c(1,2))
 
-
-freq_month_19 = barplot(table(tripdata_2020_r$month), 
-     main = "Freq during months",
-     xlab = "Months",
-     ylab = "Freq",
-     col = "light Blue")
-
-freq_age_month = barplot(table(tripdata_2020_r$gender, tripdata_2020_r$month),
-                         beside = TRUE)
-
-freq_age_month = barplot(table(tripdata_2020_r$usertype, tripdata_2020_r$month),
-                         names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"),
-                         beside = TRUE)
-
-
-mean_dur_20 = c()
-
-for (val in 1:12){
-  mean_dur_20[val] =  round(mean(tripdata_2020_r$tripduration[tripdata_2020_r$month == val])/60,2)
-}
-
-min_per_month_20 = barplot(mean_dur_20, 
-     main = "Avg (min) per month",
-     xlab = "Months",
-     ylab = "Mins",
-     ylim=c(0, max(mean_dur_20) + 5),
-     col = "light green",
-     names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
-```
-```{r}
 t=table(tripdata_2020_r$usertype, tripdata_2020_r$month)
 s=colSums(t)
 for (i in 1:12){
   t[2*i-1] = t[2*i-1]/s[i]
   t[2*i] = t[2*i]/s[i]
 }
-barplot(t)
+barplot(t,
+        main='Usertype fraction per month',
+        xlab='Month',
+        ylab='Fraction',
+        col=our_palette[3:4],
+        legend=TRUE,
+        args.legend = list(legend=(c('Subscriber', 'Customer'))))
 
-t=table(tripdata_2020_r$usertype, tripdata_2020_r$month)
-s=sum(colSums(t))
-for (i in 1:12){
-  t[2*i-1] = t[2*i-1]/s
-  t[2*i] = t[2*i]/s
-}
-barplot(t)
+
+```
+```{r}
+EDA_UT = subset(tripdata_2020_r, select = c(tripduration, usertype))
+
+customer_dur = EDA_UT[EDA_UT$usertype == 0,]
+subscriber_dur = EDA_UT[EDA_UT$usertype == 1,]
+
+den_customer = density(log(customer_dur$tripduration))
+den_subscriber = density(log(subscriber_dur$tripduration))
+
+plot(den_customer, main="Customer vs Sub trip duration", col=our_palette[3])
+lines(den_subscriber, col=our_palette[3])
+
+abline(v=mean(log(customer_dur$tripduration)),
+       col = our_palette[3],
+       lwd =3)
+abline(v=mean(log(subscriber_dur$tripduration)),
+       col = our_palette[4],
+       lwd =3)
+
+legend("topright", 
+       legend = c("Customer", "Subscriber"),
+       fill = c(our_palette[3], our_palette[4]))
+
+
+# Fill the areas
+polygon(den_customer, col = rgb(0, 0, 1, alpha = 0.6))
+polygon(den_subscriber, col = rgb(1, 0.5, 0, alpha = 0.6))
+
+x = seq(4, 12, by = .1)
+y = dnorm(x, mean = mean(log(customer_dur$tripduration)), sd = sd(log(customer_dur$tripduration)))
+lines(x,y, type='l',
+      lwd=3,
+      col = our_palette[3])
+
+x = seq(4, 12, by = .1)
+y = dnorm(x, mean = mean(log(subscriber_dur$tripduration)), sd = sd(log(subscriber_dur$tripduration)))
+lines(x,y, type='l',
+      lwd=3,
+      col = our_palette[4])
 ```
 
-tab = table(tripdata_2020_r$gender, tripdata_2020_r$usertype)
+```{r}
+par(mfrow=c(1,2))
+
+qqPlot(log(customer_dur$tripduration),
+       ylab='Customer trip duration',
+       envelope=TRUE)
+qqPlot(log(subscriber_dur$tripduration),
+       ylab='Subscriber trip duration',
+       envelope=TRUE)
+
+```
+```{r}
+EDA_gender = subset(tripdata_2020_r, select = c(tripduration, gender))
+
+male_dur = EDA_gender[EDA_gender$gender == 1,]
+female_dur = EDA_gender[EDA_gender$gender == 2,]
+
+den_male = density(log(male_dur$tripduration))
+den_female = density(log(female_dur$tripduration))
+
+plot(den_male, main="Gender trip duration", col=our_palette[2])
+lines(den_female, col=our_palette[1])
+
+abline(v=mean(log(male_dur$tripduration)),
+       col = our_palette[2],
+       lwd =3)
+abline(v=mean(log(female_dur$tripduration)),
+       col = our_palette[1],
+       lwd =3)
+
+legend("topright", 
+       legend = c("Male", "Female"),
+       fill = c(our_palette[2], our_palette[1]))
+
+
+# Fill the areas
+polygon(den_male, col = rgb(0, 1, 0, alpha = 0.2))
+polygon(den_female, col = rgb(1, 0, 0, alpha = 0.2))
+
+x = seq(4, 12, by = .1)
+y = dnorm(x, mean = mean(log(male_dur$tripduration)), sd = sd(log(male_dur$tripduration)))
+lines(x,y, type='l',
+      lwd=3,
+      col = our_palette[2])
+
+x = seq(4, 12, by = .1)
+y = dnorm(x, mean = mean(log(female_dur$tripduration)), sd = sd(log(female_dur$tripduration)))
+lines(x,y, type='l',
+      lwd=3,
+      col = our_palette[1])
+```
+c(rgb(1, 0, 0), 
+              rgb(0, 1, 0),
+```{r}
+par(mfrow=c(1,1))
+
+qqPlot(log(male_dur$tripduration),
+       ylab='Customer trip duration',
+       envelope=TRUE)
+qqPlot(log(female_dur$tripduration),
+       ylab='Subscriber trip duration',
+       envelope=TRUE)
+```
+
+```{r}
+tab = table(tripdata_2019_r$gender, tripdata_2019_r$usertype)
 hist = barplot(tab, 
         beside = TRUE, 
         legend = FALSE,
@@ -345,27 +421,7 @@ text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
 ```
 
-```{r}
-EDA_UT = subset(tripdata_2020_r, select = c(tripduration, usertype))
 
-customer_dur = EDA_UT[EDA_UT$usertype == 0,]
-subscriber_dur = EDA_UT[EDA_UT$usertype == 1,]
-
-den_customer = density(log(customer_dur$tripduration))
-den_subscriber = density(log(subscriber_dur$tripduration))
-
-plot(den_customer, main="Customer vs Sub trip duration", col="red")
-lines(den_subscriber, col="green")
-
-legend("topright", 
-       legend = c("Customer", "Subscriber"),
-       fill = c("red", "green"))
-
-
-# Fill the areas
-polygon(den_customer, col = rgb(0.9, 0, 0, alpha = 0.6))
-polygon(den_subscriber, col = rgb(0, 0.9, 0, alpha = 0.6))
-```
 
 ```{r}
 den_trip_p = density(log(data_o85_20$tripduration[data_o85_20$age_groups==4]), adjust = 3.5)
@@ -485,6 +541,102 @@ lines(c4, col = our_palette[4], lwd = 2)
 legend("topright", 
        legend = c("Group 1: 16-30", "Group 2: 31-45", "Group 3: 46-65", "Group 4: 65+"),
        fill = our_palette)
+```
+
+```{r}
+data_u85_20 = subset(data_u85_20, select = -c(startday, stopday, bikeid))
+
+rf_100_g = readRDS('rf_best.rda')
+rf_50_g = readRDS('rf_best_g_50.rda')
+rf_100_g = readRDS('rf_best_g_10.rda')
+
+
+pred_1 = predict(rf_100, newdata = subset(data_u85_20, select = -c(age_groups)))
+pred_2 = predict(rf_50, newdata = subset(data_u85_20, select = -c(age_groups)))
+pred_3 = predict(rf_10, newdata = subset(data_u85_20, select = -c(age_groups)))
+
+a = as.data.frame(pred_1)
+colnames(a) = c("pred_a")
+a$pred_a = as.numeric(a$pred_a)
+
+b = as.data.frame(pred_2)
+colnames(b) = c("pred_b")
+b$pred_b = as.numeric(b$pred_b)
+
+c = as.data.frame(pred_3)
+colnames(c) = c("pred_c")
+c$pred_c = as.numeric(c$pred_c)
+
+a$pred_b = (b$pred_b)
+a$pred_c = (c$pred_c)
+a$pred_a = (a$pred_a)
+rm(b,c)
+
+pred_1a = (a$pred_a)
+pred_2a = (a$pred_b)
+pred_3a = (a$pred_c)
+df_prob_1 = as.data.frame(predict(rf_100, newdata=subset(data_u85_20, select = -c(age_groups)), type='prob'))
+df_prob_2 = as.data.frame(predict(rf_50, newdata=subset(data_u85_20, select = -c(age_groups)), type='prob'))
+df_prob_3 = as.data.frame(predict(rf_10, newdata=subset(data_u85_20, select = -c(age_groups)), type='prob'))
+
+final = vector(mode="list", length = length(pred_1a))
+w_class = c(0.48, 0.72, 0.79, 0.98)
+c = 0
+
+ty <- function(num, pred){
+
+  if(length(num) != 1){
+    return(pred)
+  }else{
+    return(num)
+  }
+}
+
+for (i in (1:length(final))){
+  if(pred_1a[i] == pred_2a[i] | pred_1a[i] == pred_3a[i] | pred_3a[i] == pred_2a[i]){
+    final[i] = pred_1a[i]
+  }else{
+    prob_pred_1 = df_prob_1[i,]
+    prob_pred_2 = df_prob_2[i,]
+    prob_pred_3 = df_prob_3[i,]
+
+    m1 = max(prob_pred_1)
+    m2 = max(prob_pred_2)
+    m3 = max(prob_pred_3)
+
+    pos1 = which(prob_pred_1 == m1)
+    pos2 = which(prob_pred_2 == m2)
+    pos3 = which(prob_pred_3 == m3)
+    
+    pos1 = ty(pos1, pred_1a[i])
+    pos2 = ty(pos2, pred_2a[i])
+    pos3 = ty(pos3, pred_3a[i])
+
+    val1 = 0.50 * (as.numeric(w_class[pos1]) * m1)
+    val2 = 0.30 * (as.numeric(w_class[pos2]) * m2)
+    val3 = 0.20 * (as.numeric(w_class[pos3]) * m3)
+    
+    fin = max(val1, val2, val3)
+    if(fin == val1){
+      pos = pos1
+    }
+
+    if(fin == val2){
+      pos = pos2
+    }
+    
+    if(fin == val3){
+      pos = pos3
+    }
+    final[i] = 1
+    c = c+1
+  }
+}
+a$fin = as.numeric(final)
+
+# test result
+res = table(a$fin, data_u85_20$age_groups)
+plot_stats(res, cf = T)
 ```
 
 #GENDER ASSUMER 2020

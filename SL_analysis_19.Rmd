@@ -590,17 +590,34 @@ plot_stats(tab_test_knn, cf = T)
 ```
 
 ```{r}
+percs = get_perc(mode = "100k")
+
+
+one = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
+data_train = as.data.frame(one[[1]])
+data_test = as.data.frame(one[[2]])
+
+data_agg = setdiff(data_u85, as.data.frame(one[1]))
+two = get_balanced_v2(data_agg, percs[[1]], percs[[2]])
+data_train = as.data.frame(two[[1]])
+data_test = as.data.frame(two[[2]])
+
+data_agg = setdiff(data_agg, as.data.frame(two[1]))
+three = get_balanced_v2(data_agg, percs[[1]], percs[[2]])
+data_train = as.data.frame(three[[1]])
+data_test = as.data.frame(three[[2]])
+
+
+data_test_diff = setdiff(data_agg, as.data.frame(three[1]))
+```
+
+```{r}
 ################### RANDOM FOREST ##########################
 
-percs = get_perc(mode = "10k")
 
 
-full = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
-data_train = full[[1]]
-data_test = full[[2]]
-
-data_train = subset(data_train, select=-c(gender,startday, stopday, bikeid))
-data_test = subset(data_test, select=-c(gender,startday, stopday, bikeid))
+data_train = subset(data_train, select=-c(gender))
+data_test = subset(data_test, select=-c(gender))
 
 
 #our Y
@@ -613,7 +630,10 @@ data_test = subset(data_test, select = -c(age_groups))
 
 rf_model = randomForest(x = data_train,
                         y = as.factor(labels_train),
-                        ntree = 300)
+                        ntree = 100,
+                        xtest = data_train,
+                        ytest = as.factor(labels_train),
+                        keep.forest = TRUE)
 
 rf_model_pred_train = predict(rf_model, newdata = data_train)
 rf_model_pred = predict(rf_model, newdata = data_test)
@@ -633,7 +653,7 @@ varImpPlot(rf_model)
 ```
 
 ```{r}
-saveRDS(rf_model, "rf_best_ng_10.rda")
+saveRDS(rf_model, "rf_best_ng_r_100p3.rda")
 ```
 
 ```{r}
@@ -766,23 +786,40 @@ barplot_acc_model = barplot(tab_accuracy_models$vec_acc_model,
 
 
 ```{r}
-percs = get_perc(mode = "10k")
+percs = get_perc(mode = "100k")
 
 one = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
 data_train = as.data.frame(one[[1]])
 data_test = as.data.frame(one[[2]])
 
+rf_100 = readRDS('rf_best_ng_r_100p1.rda')
+rf_50 = readRDS(('rf_best_ng_r_100p2.rda'))
+rf_10 = readRDS(('rf_best_ng_r_100p3.rda'))
 
 # -----------------------------------------------------------------------
 
 # RF 1
 labels_train_one = data_train_one$age_groups
-data_train_one = subset(data_train_one, select = -c(age_groups))
+data_train = subset(data_train_one, select = -c(age_groups))
 
-rf_model_one = randomForest(x = data_train_one,
-                            y = as.factor(labels_train_one),
-                            ntree = 150)
+rf_model_one = randomForest(x = data_train,
+                            y = as.factor(labels_train),
+                            ntree = 150,
+                            xtest = data_train,
+                            ytest = as.factor(labels_train),
+                            keep.forest = TRUE)
 
+prob_1=predict(rf_model_one, data_train)
+
+b = as.data.frame(prob_1)
+colnames(b) = c("pred_b")
+b$pred_b = as.numeric(b$pred_b)
+
+a$pred_b = (b$pred_b)
+
+pred_1b = (a$pred_b)
+
+df_prob_1 = as.data.frame(prob)
 
 # -----------------------------------------------------------------------
 
@@ -797,27 +834,56 @@ rf_model_two = randomForest(x = data_train,
                             ytest = as.factor(labels_train),
                             keep.forest = TRUE)
 
-prob=predict(rf_model_two, data_train, type="prob")
-prob
+prob=predict(rf_model_two, data_train)
 
+a = as.data.frame(prob)
+colnames(a) = c("pred_a")
+a$pred_a = as.numeric(a$pred_a)
+
+a$pred_a = (a$pred_a)
+
+pred_1a = (a$pred_a)
 
 df_prob = as.data.frame(prob)
 
+coll = c(df_prob_1, df_prob)
+w_class = c(0.48, 0.72, 0.79, 0.98)
+
+final = vector(mode="list", length = length(pred_1a))
+c = 0
 
 
+for (i in (1:length(final))){
+  if(pred_1a[i] == pred_1b[i]){
+    final[i] = pred_1a[i]
+  }else{
+    prob_pred_1 = df_prob_1[i,]
+    prob_pred_2 = df_prob[i,]
 
+    m1 = max(prob_pred_1)
+    m2 = max(prob_pred_2)
 
+    pos1 = which(prob_pred_1 == m1)
+    pos2 = which(prob_pred_2 == m2)
 
+    val1 = 0.55 * (as.numeric(w_class[pos1]) * m1)
+    val2 = 0.45 * (as.numeric(w_class[pos2]) * m2)
 
+    if(val1 > val2){
+      pos = pos1
+    }else{
+      pos = pos2
+    }
+    final[i] = pos
+    c = c+1
+  }
+}
 
+a$fin = as.numeric(final)
 
-
-
-
-
-
-
-
+# test result
+res = table(a$fin, data_test$age_groups)
+plot_stats(res, cf = T)
 
 # -----------------------------------------------------------------------
 
@@ -831,9 +897,9 @@ rf_model_three = randomForest(x = data_train_three,
 
 
 ####### PREDICT #########
-pred_1 = predict(rf_model_one, newdata = subset(data_test, select = -c(age_groups)))
-pred_2 = predict(rf_model_two, newdata = subset(data_test, select = -c(age_groups)))
-pred_3 = predict(rf_model_three, newdata = data_test)
+pred_1 = predict(rf_100, newdata = subset(data_test_diff, select = -c(age_groups)))
+pred_2 = predict(rf_50, newdata = subset(data_test_diff, select = -c(age_groups)))
+pred_3 = predict(rf_10, newdata = subset(data_test_diff, select = -c(age_groups)))
 
 a = as.data.frame(pred_1)
 colnames(a) = c("pred_a")
@@ -856,13 +922,59 @@ pred_1a = (a$pred_a)
 pred_2a = (a$pred_b)
 pred_3a = (a$pred_c)
 
+df_prob_1 = as.data.frame(predict(rf_100, newdata=subset(data_test_diff, select = -c(age_groups)), type='prob'))
+df_prob_2 = as.data.frame(predict(rf_50, newdata=subset(data_test_diff, select = -c(age_groups)), type='prob'))
+df_prob_3 = as.data.frame(predict(rf_10, newdata=subset(data_test_diff, select = -c(age_groups)), type='prob'))
+
 final = vector(mode="list", length = length(pred_1a))
+w_class = c(0.48, 0.72, 0.79, 0.98)
 c = 0
+
+ty <- function(num, pred){
+
+  if(length(num) != 1){
+    return(pred)
+  }else{
+    return(num)
+  }
+}
 
 for (i in (1:length(final))){
   if(pred_1a[i] == pred_2a[i] | pred_1a[i] == pred_3a[i] | pred_3a[i] == pred_2a[i]){
     final[i] = pred_1a[i]
   }else{
+    prob_pred_1 = df_prob_1[i,]
+    prob_pred_2 = df_prob_2[i,]
+    prob_pred_3 = df_prob_3[i,]
+
+    m1 = max(prob_pred_1)
+    m2 = max(prob_pred_2)
+    m3 = max(prob_pred_3)
+
+    pos1 = which(prob_pred_1 == m1)
+    pos2 = which(prob_pred_2 == m2)
+    pos3 = which(prob_pred_3 == m3)
+    
+    pos1 = ty(pos1, pred_1a[i])
+    pos2 = ty(pos2, pred_2a[i])
+    pos3 = ty(pos3, pred_3a[i])
+
+    val1 = (as.numeric(w_class[pos1]) * m1)
+    val2 = (as.numeric(w_class[pos2]) * m2)
+    val3 = (as.numeric(w_class[pos3]) * m3)
+    
+    fin = max(val1, val2, val3)
+    if(fin == val1){
+      pos = pos1
+    }
+
+    if(fin == val2){
+      pos = pos2
+    }
+    
+    if(fin == val3){
+      pos = pos3
+    }
     final[i] = 1
     c = c+1
   }
@@ -871,7 +983,7 @@ for (i in (1:length(final))){
 a$fin = as.numeric(final)
 
 # test result
-res = table(a$fin, data_test$age_groups)
+res = table(a$fin, data_test_diff$age_groups)
 plot_stats(res, cf = T)
 ```
 
@@ -892,6 +1004,7 @@ cool_cf(pred_3, data_test$age_groups)
 plot_stats(res3, cf = T)
 
 ```
+
 ```{r}
 
 pred_1 = predict(rf_model_one, newdata = data_test)
