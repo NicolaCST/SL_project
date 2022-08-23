@@ -229,6 +229,7 @@ tripdata_2019_r = tripdata_2019_r[sample(1:nrow(tripdata_2019_r)),]
 ```
 
 
+
 ```{r}
 cat("min age:", min(tripdata_2019_r$age))
 cat("\nmax age:", max(tripdata_2019_r$age))
@@ -275,7 +276,7 @@ barplot_age_group = barplot(table(data_u85$age_groups),
 ```
 `
 ```{r}
-par(mfrow=c(1,2))
+par(mfrow=c(2,2))
 
 
 freq_month_19 = barplot(table(data_u85$month), 
@@ -283,6 +284,13 @@ freq_month_19 = barplot(table(data_u85$month),
      xlab = "Months",
      ylab = "Freq",
      col = "light Blue")
+
+freq_age_month = barplot(table(data_u85$age_groups, data_u85$month),
+                         names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"))
+
+freq_age_month = barplot(table(tripdata_2019_r$usertype, tripdata_2019_r$month),
+                         names.arg=c("1","2","3","4","5", "6", "7", "8", "9", "10", "11", "12"),
+                         beside = TRUE)
 
 
 mean_dur_19 = c()
@@ -504,7 +512,7 @@ predictors(results)
 # plot the results
 plot(results, type=c("g", "o"))
 
-#BEST FEATURE -> ALL - start.day, stop.day, bikeID (12)
+#BEST FEATURE -> ALL - startday, stopday, bikeid (12)
 
 ```
   nVar    accuracy    Kappa       AccuracySD    KappaSD
@@ -582,9 +590,14 @@ plot_stats(tab_test_knn, cf = T)
 
 percs = get_perc(mode = "10k")
 
+
 full = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
 data_train = full[[1]]
 data_test = full[[2]]
+
+data_train = subset(data_train, select=-c(gender,startday, stopday, bikeid))
+data_test = subset(data_test, select=-c(gender,startday, stopday, bikeid))
+
 
 #our Y
 labels_train = data_train$age_groups
@@ -616,7 +629,7 @@ varImpPlot(rf_model)
 ```
 
 ```{r}
-saveRDS(rf_model, "rf.rda")
+saveRDS(rf_model, "rf_best_ng_10.rda")
 ```
 
 ```{r}
@@ -629,6 +642,8 @@ sapply(2:length(rs),function(i) lines.roc(rs[[i]],col=i))
 ```{r}
 data_train$age_groups = labels_train
 data_test$age_groups = labels_test
+
+data_u85 = subset(data_u85, select=-c(gender,startday, stopday, bikeid))
 
 new = setdiff(data_u85, data_train)
 new = setdiff(new, data_test)
@@ -742,6 +757,201 @@ barplot_acc_model = barplot(tab_accuracy_models$vec_acc_model,
      ylab = "Accuracy",
      col = "light green",
      names.arg = tab_accuracy_models$vec_name_model)
+
+```
+
+
+```{r}
+percs = get_perc(mode = "10k")
+
+one = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
+data_train_one = as.data.frame(one[[1]])
+data_test = setdiff(data_u85, data_train_one)
+
+
+library(h2o)
+rm(tripdata_2019_r, data_o85, one)
+data_test = data_test[sample(1:nrow(data_test), 0.3*nrow(data_test)),]
+rm(tripdata_2019_r, data_o85, one)
+
+
+h2o.init()
+data_train_one$age_groups = as.factor(data_train_one$age_groups)
+
+train_df_h2o<-as.h2o(data_train_one)
+test_df_h2o<-as.h2o(data_test)
+
+y <- "age_groups"
+x <- setdiff(names(train_df_h2o), y)
+
+
+nfolds <- 3
+
+# Train & Cross-validate a RF
+my_rf <- h2o.randomForest(x = x,
+                          y = y,
+                          training_frame = train_df_h2o,
+                          nfolds = nfolds,
+                          ntrees = 10,
+                          keep_cross_validation_predictions = TRUE,
+                          seed = 42)
+
+
+# Train & Cross-validate a RF
+my_rf2 <- h2o.randomForest(x = x,
+                          y = y,
+                          training_frame = train_df_h2o,
+                          nfolds = nfolds,
+                          keep_cross_validation_predictions = TRUE,
+                          seed = 42,
+                          ntrees = 5)
+
+
+
+# Train a stacked random forest ensemble using the GBM, RF and LR above
+ensemble <- h2o.stackedEnsemble(x = x,
+                                y = y,
+                                metalearner_algorithm="drf",
+                                training_frame = train_df_h2o,
+                                base_models = list(my_rf, my_rf2))
+
+# Eval ensemble performance on a test set
+perf <- h2o.performance(ensemble, newdata = test_df_h2o)
+
+
+# Compare to base learner performance on the test set
+perf_rf_test <- h2o.performance(my_rf, newdata = test_df_h2o)
+perf_rf2_test <- h2o.performance(my_rf2, newdata = test_df_h2o)
+
+h2o.confusionMatrix(my_rf)
+h2o.confusionMatrix(my_rf2)
+h2o.confusionMatrix(perf)
+
+```
+
+
+```{r}
+percs = get_perc(mode = "10k")
+
+one = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
+data_train = as.data.frame(one[[1]])
+data_test = as.data.frame(one[[2]])
+
+
+# -----------------------------------------------------------------------
+
+# RF 1
+labels_train_one = data_train_one$age_groups
+data_train_one = subset(data_train_one, select = -c(age_groups))
+
+rf_model_one = randomForest(x = data_train_one,
+                            y = as.factor(labels_train_one),
+                            ntree = 150)
+
+
+# -----------------------------------------------------------------------
+
+# RF 2
+labels_train = data_train$age_groups
+data_train = subset(data_train, select = -c(age_groups))
+
+rf_model_two = randomForest(x = data_train,
+                            y = as.factor(labels_train),
+                            ntree = 100)
+
+
+
+# -----------------------------------------------------------------------
+
+# RF 3
+labels_train_three = data_train_three$age_groups
+data_train_three = subset(data_train_three, select = -c(age_groups))
+
+rf_model_three = randomForest(x = data_train_three,
+                            y = as.factor(labels_train_three),
+                            ntree = 100)
+
+
+####### PREDICT #########
+pred_1 = predict(rf_model_one, newdata = subset(data_test, select = -c(age_groups)))
+pred_2 = predict(rf_model_two, newdata = data_test)
+pred_3 = predict(rf_model_three, newdata = data_test)
+
+a = as.data.frame(pred_1)
+colnames(a) = c("pred_a")
+a$pred_a = as.numeric(a$pred_a)
+
+b = as.data.frame(pred_2)
+colnames(b) = c("pred_b")
+b$pred_b = as.numeric(b$pred_b)
+
+c = as.data.frame(pred_3)
+colnames(c) = c("pred_c")
+c$pred_c = as.numeric(c$pred_c)
+
+a$pred_b = (b$pred_b)
+a$pred_c = (c$pred_c)
+a$pred_a = (a$pred_a)
+rm(b,c)
+
+pred_1a = (a$pred_a)
+pred_2a = (a$pred_b)
+pred_3a = (a$pred_c)
+
+final = vector(mode="list", length = length(pred_1a))
+c = 0
+
+for (i in (1:length(final))){
+  if(pred_1a[i] == pred_2a[i] | pred_1a[i] == pred_3a[i] | pred_3a[i] == pred_2a[i]){
+    final[i] = pred_1a[i]
+  }else{
+    final[i] = 1
+    c = c+1
+  }
+}
+
+a$fin = as.numeric(final)
+
+# test result
+res = table(a$fin, data_test$age_groups)
+plot_stats(res, cf = T)
+```
+
+
+```{r}
+res = table(pred_1, data_test$age_groups)
+cool_cf(pred_1, data_test$age_groups)
+plot_stats(res, cf = T)
+
+
+res2 = table(pred_2, data_test$age_groups)
+cool_cf(pred_2, data_test$age_groups)
+plot_stats(res2, cf = T)
+
+
+res3 = table(pred_3, data_test$age_groups)
+cool_cf(pred_3, data_test$age_groups)
+plot_stats(res3, cf = T)
+
+```
+```{r}
+
+pred_1 = predict(rf_model_one, newdata = data_test)
+pred_2 = predict(rf_model_two, newdata = data_test)
+pred_3 = predict(rf_model_three, newdata = data_test)
+
+
+
+#Predicting the out of fold prediction probabilities for training data
+data_train_one$OOF_pred_rf<-rf_model_one$pred$Y[order(rf_model_one$pred$rowIndex)]
+trainSet$OOF_pred_knn<-model_knn$pred$Y[order(model_knn$pred$rowIndex)]
+trainSet$OOF_pred_lr<-model_lr$pred$Y[order(model_lr$pred$rowIndex)]
+
+#Predicting probabilities for the test data
+testSet$OOF_pred_rf<-predict(model_rf,testSet[predictors],type='prob')$Y
+testSet$OOF_pred_knn<-predict(model_knn,testSet[predictors],type='prob')$Y
+testSet$OOF_pred_lr<-predict(model_lr,testSet[predictors],type='prob')$Y
+
 
 ```
 
