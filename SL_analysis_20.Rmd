@@ -318,7 +318,7 @@ abline(v=mean(log(subscriber_dur$tripduration)),
 legend("topright", 
        legend = c("Customer", "Subscriber"),
        fill = c(our_palette[3], our_palette[4]))
-
+ 
 
 # Fill the areas
 polygon(den_customer, col = rgb(0, 0, 1, alpha = 0.6))
