@@ -219,7 +219,6 @@ our_palette = c(rgb(1, 0, 0),
 ```{r}
 tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
 tripdata_2020_r = tripdata_2020_r[sample(1:nrow(tripdata_2020_r)),]
-
 ```
 
 ```{r}
@@ -286,6 +285,7 @@ for (i in 1:12){
   t[2*i-1] = t[2*i-1]/s[i]
   t[2*i] = t[2*i]/s[i]
 }
+
 barplot(t,
         main='Usertype fraction per month',
         xlab='Month',
@@ -348,6 +348,7 @@ qqPlot(log(subscriber_dur$tripduration),
        envelope=TRUE)
 
 ```
+
 ```{r}
 EDA_gender = subset(tripdata_2020_r, select = c(tripduration, gender))
 
@@ -402,7 +403,7 @@ qqPlot(log(female_dur$tripduration),
 ```
 
 ```{r}
-tab = table(tripdata_2019_r$gender, tripdata_2019_r$usertype)
+tab = table(tripdata_2020_r$gender, tripdata_2020_r$usertype)
 hist = barplot(tab, 
         beside = TRUE, 
         legend = FALSE,
@@ -417,16 +418,14 @@ legend("topleft", legend = c("Unknown", "Male", "Female"),
        fill = heat.colors(3))
 
 text(x = hist, y = tab + 50000, labels = tab, cex = .8)
-
-
 ```
 
 
 
 ```{r}
+#TODO: fix error
 den_trip_p = density(log(data_o85_20$tripduration[data_o85_20$age_groups==4]), adjust = 3.5)
 den_trip_19 = density(log(data_u85$tripduration[data_u85$age_groups==4]), adjust = 3.5)
-
 
 plot(den_trip_19,xlim = c(0,8), main = "trip density over age 4", col = our_palette[1], lwd = 2)
 lines(den_trip_p, col = our_palette[2], lwd = 2)
@@ -438,7 +437,7 @@ tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 
 
 ```{r}
-######### JOIN 2020 ###############
+######### JOIN 2019 ###############
 
 data_u85_20_19 = tripdata_2019_r[tripdata_2019_r$age <= 85,]
 data_u85_20_19$age_groups = cut(data_u85_20_19$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
@@ -469,6 +468,7 @@ data_u85_20 = rbind(data_u85_20, data_u85)
 
 #Let's try to predict the 0-age  and >80 age
 ```{r}
+#TODO: vedere che fare con sta roba
 ################# == 0 ################
 full = get_balanced_dataset(data_u85_20, balanced_gender = 0)
 data_train = data_u85_20[1:300000,]
@@ -481,8 +481,8 @@ data_train = subset(data_train, select = -c(age_groups))
 data_test = subset(data_test, select = -c(age_groups))
 
 rf_model = randomForest(x = data_train,
-                             y = as.factor(labels_train),
-                             ntree = 100)
+                         y = as.factor(labels_train),
+                         ntree = 100)
 
 
 rf_model_pred_train = predict(rf_model, newdata = data_train)
@@ -499,9 +499,7 @@ plot_stats(tab_test_rf, mode="test", cf = T)
 
 # Variable importance plot
 varImpPlot(rf_model)
-```
 
-```{r}
 data_o85_20 = subset(data_o85_20, selct = -c(stratday, stopday))
 data_u85_20 = subset(data_u85_20, selct = -c(stratday, stopday, age_groups))
 
@@ -516,15 +514,13 @@ pred_u = predict(rf_model, newdata = new)
 table(pred_o)
 
 plot_stats(table(label_new, pred_u), cf = T)
-
-#data_o85_20$age_groups = dec_age
-
-#data_age = rbind(data_u85_20, data_o85_20)
 ```
+
 ```{r}
 barplot(table(dec_age))
 barplot(table(data_u85$age_groups))
 ```
+
 ```{r}
 #FARE DI NUOVO DOPO LE PREDIZIONI
 c1 = density(data_u85_20[data_u85_20$age_groups == 1,]$month, adjust = 7)

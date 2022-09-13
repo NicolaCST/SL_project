@@ -2,7 +2,9 @@
 title: "SL_proj_doc"
 author: "NC, AdT"
 date: '2022-07-02'
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -84,33 +86,23 @@ tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Customer"] = 0
 write.csv(tripdata_2019_r, "C:/Users/Utente/Desktop/SL_project/tripdata_2019_r.csv", row.names = FALSE)
 ```
 
-
-
-
-
-
-
 -----2020----------------------------------------------------------------------------------------------------------
-
-
-
 
 Repeat the same exact procedure for the dataset of the 2020
 
 ```{r}
 tripdata_2020_r = read.csv(load_dataset("SL_dataset", "bluebikes_tripdata_2020.csv"))
-dec_2020 = read.csv(load_dataset("SL_dataset", "2020_12.csv"))
 
-a = colnames(tripdata_2020_r)
-b = colnames(dec_2020)
-setdiff(a,b)
 
-dec_2020$year = 2020
-dec_2020$month = 12
-dec_2020$birth.year = 0
-dec_2020$gender = 0
-
-tripdata_2020_r = rbind(tripdata_2020_r, dec_2020)
+# dec_2020 = read.csv(load_dataset("SL_dataset", "2020_12.csv"))
+# a = colnames(tripdata_2020_r)
+# b = colnames(dec_2020)
+# setdiff(a,b)
+# dec_2020$year = 2020
+# dec_2020$month = 12
+# dec_2020$birth.year = 0
+# dec_2020$gender = 0
+# tripdata_2020_r = rbind(tripdata_2020_r, dec_2020)
 
 
 tripdata_2020_r = subset(tripdata_2020_r, select = -c(postal.code))
@@ -159,6 +151,3 @@ tripdata_2020_r$usertype[tripdata_2020_r$usertype == "Customer"] = 0
 ```{r}
 write.csv(tripdata_2020_r, "C:/Users/Utente/Desktop/SL_project/tripdata_2020_r.csv", row.names = FALSE)
 ```
-
-
-
