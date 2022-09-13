@@ -1472,6 +1472,37 @@ end_tab$end_name = top_10_end$end_name
 ```
 
 ```{r}
+data_top = data_u85[data_u85$start.station.name %in% start_tab$start_name,]
+data_top = data_top[data_top$end.station.name %in% end_tab$end_name,]
+
+tab = table(data_top$start.station.name, data_top$end.station.name, data_top$age_groups)
+tab = as.data.frame(tab)
+
+
+colnames(tab) = c('start_name', 'end_name', 'age', 'freq')
+for (idx in 1:nrow(tab)){
+  tab$start_longitude[idx] = data_top$start.station.longitude[data_top$start.station.name == tab$start_name[idx]][1]
+  tab$start_latitude[idx] = data_top$start.station.latitude[data_top$start.station.name == tab$start_name[idx]][1]
+  tab$end_longitude[idx] = data_top$end.station.longitude[data_top$end.station.name == tab$end_name[idx]][1]
+  tab$end_latitude[idx] = data_top$end.station.latitude[data_top$end.station.name == tab$end_name[idx]][1]
+}
+
+
+tab
+tmp = tab[tab$age==1,]
+out = tmp[order(tmp$freq, decreasing = T),][1:10,]
+for (i in 2:4){
+  print(i)
+  tmp = tab[tab$age==i,]
+  out = rbind(out, tmp[order(tmp$freq, decreasing = T),][1:10,])
+}
+
+out
+write.csv(out, paste(getwd(), "SL_dataset/trips_age_19.csv", sep = "/"), row.names = FALSE)
+```
+
+
+```{r}
 bar = barplot(as.matrix(subset(start_tab, select = -c(start_name))), 
         beside = T,
         cex.names = 1,
