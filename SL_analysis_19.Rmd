@@ -1414,8 +1414,6 @@ legend("topright", c("Male", "Female"),
 
 
 
-
-
 # \############################### MAPS
 
 ```{r}
@@ -1472,37 +1470,6 @@ end_tab$end_name = top_10_end$end_name
 ```
 
 ```{r}
-data_top = data_u85[data_u85$start.station.name %in% start_tab$start_name,]
-data_top = data_top[data_top$end.station.name %in% end_tab$end_name,]
-
-tab = table(data_top$start.station.name, data_top$end.station.name, data_top$age_groups)
-tab = as.data.frame(tab)
-
-
-colnames(tab) = c('start_name', 'end_name', 'age', 'freq')
-for (idx in 1:nrow(tab)){
-  tab$start_longitude[idx] = data_top$start.station.longitude[data_top$start.station.name == tab$start_name[idx]][1]
-  tab$start_latitude[idx] = data_top$start.station.latitude[data_top$start.station.name == tab$start_name[idx]][1]
-  tab$end_longitude[idx] = data_top$end.station.longitude[data_top$end.station.name == tab$end_name[idx]][1]
-  tab$end_latitude[idx] = data_top$end.station.latitude[data_top$end.station.name == tab$end_name[idx]][1]
-}
-
-
-tab
-tmp = tab[tab$age==1,]
-out = tmp[order(tmp$freq, decreasing = T),][1:10,]
-for (i in 2:4){
-  print(i)
-  tmp = tab[tab$age==i,]
-  out = rbind(out, tmp[order(tmp$freq, decreasing = T),][1:10,])
-}
-
-out
-write.csv(out, paste(getwd(), "SL_dataset/trips_age_19.csv", sep = "/"), row.names = FALSE)
-```
-
-
-```{r}
 bar = barplot(as.matrix(subset(start_tab, select = -c(start_name))), 
         beside = T,
         cex.names = 1,
@@ -1552,6 +1519,86 @@ pos_19 = cbind(map_start,
 
 write.csv(pos_19, paste(getwd(), "SL_dataset/2019_pos.csv", sep = "/"), row.names = FALSE)
 ```
+
+
+```{r}
+## ------------------------ TOP 10 TRIP BY AGE ----------------------------- ##
+data_top = data_u85[data_u85$start.station.name %in% start_tab$start_name,]
+data_top = data_top[data_top$end.station.name %in% end_tab$end_name,]
+
+tab = table(data_top$start.station.name, data_top$end.station.name, data_top$age_groups)
+tab = as.data.frame(tab)
+
+
+colnames(tab) = c('start_name', 'end_name', 'age', 'freq')
+for (idx in 1:nrow(tab)){
+  tab$start_longitude[idx] = data_top$start.station.longitude[data_top$start.station.name == tab$start_name[idx]][1]
+  tab$start_latitude[idx] = data_top$start.station.latitude[data_top$start.station.name == tab$start_name[idx]][1]
+  tab$end_longitude[idx] = data_top$end.station.longitude[data_top$end.station.name == tab$end_name[idx]][1]
+  tab$end_latitude[idx] = data_top$end.station.latitude[data_top$end.station.name == tab$end_name[idx]][1]
+}
+
+tmp = tab[tab$age==1,]
+out = tmp[order(tmp$freq, decreasing = T),][1:10,]
+for (i in 2:4){
+  print(i)
+  tmp = tab[tab$age==i,]
+  out = rbind(out, tmp[order(tmp$freq, decreasing = T),][1:10,])
+}
+
+write.csv(out, paste(getwd(), "SL_dataset/trips_age_19.csv", sep = "/"), row.names = FALSE)
+```
+
+```{python}
+import pandas as pd
+import numpy as np
+import folium
+import webbrowser
+
+df_acc = pd.read_csv('C:/Users/Utente/Desktop/SL_project/SL_dataset/trips_age_19.csv', dtype=object)
+
+df_acc['start_name'] = df_acc['start_name'].astype(str)
+df_acc['end_name'] = df_acc['end_name'].astype(str)
+
+df_acc['age'] = df_acc['age'].astype(int)
+df_acc['freq'] = df_acc['freq'].astype(int)
+
+df_acc['start_longitude'] = df_acc['start_longitude'].astype(float)
+df_acc['start_latitude'] = df_acc['start_latitude'].astype(float)
+
+df_acc['end_longitude'] = df_acc['end_longitude'].astype(float)
+df_acc['end_latitude'] = df_acc['end_latitude'].astype(float)
+
+for i in range(1,5):
+  print(i)
+  map_hooray = folium.Map(location=[42.361145, -71.057083], zoom_start = 12) 
+  feature = "TripStart_" + str(i)
+  
+  fil = df_acc[df_acc['age'] == i]
+  feature_group = folium.FeatureGroup(feature)
+  
+  s_lat = fil['start_latitude']
+  s_lng = fil['start_longitude']
+  s_name = fil['start_name']
+  
+  e_lat = fil['end_latitude']
+  e_lng = fil['end_longitude']
+  e_name = fil['end_name']
+  
+  
+  for s_lat, s_lng, s_name, e_lat, e_lng, e_name in zip(s_lat, s_lng, s_name, e_lat, e_lng, e_name):
+      feature_group.add_child(folium.Marker(location=[s_lat,s_lng], popup=s_name, icon=folium.Icon(color="blue")))
+      feature_group.add_child(folium.Marker(location=[e_lat,e_lng], popup=e_name, icon=folium.Icon(color="orange")))
+      
+      folium.PolyLine( [[s_lat, s_lng],[e_lat, e_lng]] ).add_to(map_hooray)
+      
+
+  map_hooray.add_child(feature_group)
+  map_hooray.save("test_" + str(i) + ".html")
+
+```
+
+
 
 ```{python}
 import pandas as pd
