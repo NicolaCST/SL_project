@@ -387,14 +387,14 @@ barplot_age_group = barplot(table(data_u85$age_groups),
      main = "Age groups count",
      xlab = "Age group",
      ylab = "Freq",
-     col = our_palette)
+     col = heat.colors(4))
 
 legend("topright", 
        legend = c("Group 1: 16-30", 
                   "Group 2: 31-45", 
                   "Group 3: 46-65", 
                   "Group 4: 65-85"),
-       fill = our_palette)
+       fill = heat.colors(4))
 ```
 
 ```{r}
@@ -1180,9 +1180,12 @@ plot_stats(tab_train, mode="train", cf = F)
 
 ## TEST SET
 pred = predict(multinom_gender_model, newdata = data_test)
-tab_test_mlr = table(pred, data_test$gender)
+tab_test_mlr_gen = table(pred, data_test$gender)
 
-plot_stats(tab_test_mlr, cf = T)
+precision_mlr_gen = round(precision(tab_test_mlr_gen),2)
+recall_mlr_gen = round(recall(tab_test_mlr_gen),2)
+
+plot_stats(tab_test_mlr_gen, cf = T)
 ```
 
 ```{r}
@@ -1207,9 +1210,11 @@ tab_train_rf = table(rf_model_pred_train, labels_train)
 plot_stats(tab_train_rf, mode="train", cf = F)
   
 # test result
-tab_test_rf = table(rf_model_pred, labels_test)
-plot_stats(tab_test_rf, mode="test", cf = T)
+tab_test_rf_gen = table(rf_model_pred, labels_test)
+plot_stats(tab_test_rf_gen, mode="test", cf = T)
 
+precision_rf_gen = round(precision(tab_test_rf_gen),2)
+recall_rf_gen = round(recall(tab_test_rf_gen),2)
 
 # Variable importance plot
 varImpPlot(rf_model)
@@ -1261,9 +1266,12 @@ plot_stats(tab_train, mode="train", cf = F)
 
 ## TEST SET
 pred = predict(lda_model, newdata = data_test)
-tab_test_lda = table(pred$class, data_test$gender)
+tab_test_lda_gen = table(pred$class, data_test$gender)
 
-plot_stats(tab_test_lda, cf = T)
+precision_lda_gen = round(precision(tab_test_lda_gen),2)
+recall_lda_gen = round(recall(tab_test_lda_gen),2)
+
+plot_stats(tab_test_lda_gen, cf = T)
 
 ```
 
@@ -1280,9 +1288,12 @@ plot_stats(tab_train, mode="train", cf = F)
 
 ## TEST SET
 pred = predict(qda_model, newdata = data_test)
-tab_test_qda = table(pred$class, data_test$gender)
+tab_test_qda_gen = table(pred$class, data_test$gender)
 
-plot_stats(tab_test_qda, cf = T)
+precision_qda_gen = round(precision(tab_test_qda_gen),2)
+recall_qda_gen = round(recall(tab_test_qda_gen),2)
+
+plot_stats(tab_test_qda_gen, cf = T)
 
 ```
 
@@ -1299,9 +1310,12 @@ plot_stats(tab_train, mode="train", cf = F)
 
 ## TEST SET
 pred = predict(mda_model, newdata = data_test)
-tab_test_mda = table(pred, data_test$gender)
+tab_test_mda_gen = table(pred, data_test$gender)
 
-plot_stats(tab_test_mda, cf = T)
+precision_mda_gen = round(precision(tab_test_mda_gen),2)
+recall_mda_gen = round(recall(tab_test_mda_gen),2)
+
+plot_stats(tab_test_mda_gen, cf = T)
 
 ```
 
@@ -1318,9 +1332,12 @@ plot_stats(tab_train, mode="train", cf = F)
 
 ## TEST SET
 pred = predict(rda_model, newdata = data_test)
-tab_test_rda = table(pred$class, data_test$gender)
+tab_test_rda_gen = table(pred$class, data_test$gender)
 
-plot_stats(tab_test_rda, cf = T)
+precision_rda_gen = round(precision(tab_test_rda_gen),2)
+recall_rda_gen = round(recall(tab_test_rda_gen),2)
+
+plot_stats(tab_test_rda_gen, cf = T)
 ```
 
 
@@ -1330,25 +1347,74 @@ plot_stats(tab_test_rda, cf = T)
 #vec_name_model = c("MLR", "KNN", "RF", "LDA", "MDA", "QDA")
 vec_name_model = c("MLR", "RF", "LDA", "MDA", "QDA", "RDA")
 
-vec_acc_model = c((round(accuracy(tab_test_mlr),2)),
-                  #(round(accuracy(tab_test_knn),2)),
-                  (round(accuracy(tab_test_rf),2)),
-                  (round(accuracy(tab_test_lda),2)),
-                  (round(accuracy(tab_test_mda),2)),
-                  (round(accuracy(tab_test_qda),2)),
-                  (round(accuracy(tab_test_rda),2)))
+vec_acc_model_gen = c((round(accuracy(tab_test_mlr_gen),2)),
+                      #(round(accuracy(tab_test_knn),2)),
+                      (round(accuracy(tab_test_rf_gen),2)),
+                      (round(accuracy(tab_test_lda_gen),2)),
+                      (round(accuracy(tab_test_mda_gen),2)),
+                      (round(accuracy(tab_test_qda_gen),2)),
+                      (round(accuracy(tab_test_rda_gen),2)))
 
 
-tab_accuracy_models = data.frame(vec_name_model, vec_acc_model)
+tab_accuracy_models = data.frame(vec_name_model, vec_acc_model_gen)
 
-barplot_acc_model = barplot(tab_accuracy_models$vec_acc_model, 
-     main = "Summary test accuracy GENDER",
-     xlab = "Model name",
-     ylab = "Accuracy",
-     col = "light blue",
-     names.arg = tab_accuracy_models$vec_name_model)
+barplot_acc_model = barplot(tab_accuracy_models$vec_acc_model_gen, 
+                             main = "Summary test accuracy GENDER",
+                             xlab = "Model name",
+                             ylab = "Accuracy",
+                             col = "light blue",
+                             names.arg = tab_accuracy_models$vec_name_model)
 
 ```
+```{r}
+precision_gen = cbind(data.frame(precision_mlr_gen), 
+                      data.frame(precision_rf_gen),
+                      data.frame(precision_lda_gen),
+                      data.frame(precision_mda_gen),
+                      data.frame(precision_qda_gen),
+                      data.frame(precision_rda_gen))
+
+recall_gen = cbind(data.frame(recall_mlr_gen), 
+                  data.frame(recall_rf_gen),
+                  data.frame(recall_lda_gen),
+                  data.frame(recall_mda_gen),
+                  data.frame(recall_qda_gen),
+                  data.frame(recall_rda_gen))
+```
+
+```{r}
+par(mfrow=c(1,2))
+
+barplot_prec_model = barplot(as.matrix(precision_gen), 
+                          beside = T,
+                          main = "Precision on GENDER",
+                          xlab = "Model name",
+                          ylab = "Precision",
+                          names.arg = vec_name_model,
+                          col = heat.colors(2))
+
+legend("topright", c("Male", "Female"),
+       fill = heat.colors(2), cex = 0.8)
+
+
+
+barplot_rec_model = barplot(as.matrix(recall_gen), 
+                          beside = T,
+                          main = "Recall on GENDER",
+                          xlab = "Model name",
+                          ylab = "Recall",
+                          names.arg = vec_name_model,
+                          col = heat.colors(2))
+
+legend("topright", c("Male", "Female"),
+       fill = heat.colors(2), cex = 0.8)
+
+```
+
+
+
+
+
 
 # \############################### MAPS
 
