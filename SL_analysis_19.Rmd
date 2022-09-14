@@ -81,7 +81,7 @@ In order to perform a solid analysis, we've arranged an initial data preprocessi
 
 -   We added a new field, named "Age", and filled it with the difference between the year of the trip and the birth year of the user.
 
--   The new field "Age" brought to light some suspicious values (max age: 133). To get rid of these values, we divided the dataset into two sub-dataset: the first, considered the main one, with a max age \<= 85, the second one, with age \> 85.
+-   The new field "Age" brought to light some suspicious values (max age: 133). To get rid of these values, we divided the dataset into two sub-dataset: the first, considered the main one, with a max age \<= 85, the second one, with age \> 85 that will be discarded (this type of entries amount to the 0.0003% of the total data).
 
 -   In order to perform a more robust classification on the age, we rearranged the users age into "*Age Groups*":
 
@@ -120,6 +120,7 @@ library(caret)
 library(tidyverse)
 library(MASS)
 library(e1071)
+library(kableExtra)
 
 set.seed(42)
 ```
@@ -339,23 +340,42 @@ tripdata_2019_r = tripdata_2019_r[sample(1:nrow(tripdata_2019_r)),]
 As mentioned in the Preprocessing section, it is possible to see some outliers in the age field (probably mainly caused by the users during the registration to the system)
 
 ```{r}
+
+par(mfrow=c(1,2))
+
+hist(tripdata_2019_r$age,
+     breaks = 20,
+     xlab = "Age",
+     main = "Age hist 2019",
+     col = "lightblue",
+     freq = FALSE)
+
+lines(density(tripdata_2019_r$age, adjust = 3), # density plot
+ lwd = 2, # thickness of line
+ col = "chocolate3")
+
+
+boxplot(tripdata_2019_r$age,
+        ylab = "Age",
+        main = "Boxplot age 2019",
+        col = "lightblue",
+        outcol = "red")
+
+```
+
+From these plots it is possible to see that users with age greater than 75 are considered as "*outliers*". To be sure of this statement we also checked the average lifespan of the Boston's citizens in the 2019 - 2020 from their government website, which results to be around 80 years.
+
+```{r}
 cat("min age:", min(tripdata_2019_r$age))
 cat("\nmax age:", max(tripdata_2019_r$age))
 cat("\nusers >85y:", nrow(tripdata_2019_r[tripdata_2019_r$age > 85,]))
 cat("\nusers >100y:", nrow(tripdata_2019_r[tripdata_2019_r$age > 100,]))
 cat("\nusers <=85:", nrow(tripdata_2019_r[tripdata_2019_r$age <= 85 & tripdata_2019_r$age > 0,]))
-
-par(mfrow=c(1,2))
-
-hist(tripdata_2019_r$age, 
-     breaks = 20,
-     xlab = "Age",
-     main = "Age Histogram 2019")
-
-dens = density(tripdata_2019_r$age)
-plot(dens,main = "Age density 2019")
-
 ```
+
+### Age groups analysis
+
+In this section we're going to split the ages of the users in 4 groups, as mentioned in the preprocessing section. Moreover, we also provide a normalization of the fields: tripduration, starttime, stoptime along with the exclusion of some fields - like: age, birth.year and year - since at this point they do not provide any useful (or new) information
 
 ```{r}
 #Split in age groups, remove useless fields, and use Minutes
@@ -378,23 +398,19 @@ data_u85$stoptime = round(data_u85$stoptime/60,2)
 data_u85[c("starttime", "stoptime")] = lapply(data_u85[c("starttime", "stoptime")], nor)
 ```
 
-### Age groups analysis
-
-In this section we're going to analyze ..
-
 ```{r}
 barplot_age_group = barplot(table(data_u85$age_groups), 
      main = "Age groups count",
      xlab = "Age group",
      ylab = "Freq",
-     col = heat.colors(4))
+     col = viridis(4))
 
 legend("topright", 
        legend = c("Group 1: 16-30", 
                   "Group 2: 31-45", 
                   "Group 3: 46-65", 
                   "Group 4: 65-85"),
-       fill = heat.colors(4))
+       fill = viridis(4))
 ```
 
 ```{r}
@@ -406,11 +422,10 @@ tab_group
 
 As we can see the classes are highly unbalanced. However we expected the 1st class (i.e. students and young-workers) to be the most populated, and the 4th one (i.e. elderly persons) to be the less populated.
 
-At this point we want to control the trends of trips over months and over the age groups:
+At this point we want to analyzie the trends of trips over months and over the age groups:
 
 ```{r}
-par(mfrow=c(2,2))
-
+par(mfrow=c(1,2))
 
 freq_month_19 = barplot(table(data_u85$month), 
      main = "Freq during months",
@@ -434,20 +449,34 @@ min_per_month_19 = barplot(mean_dur_19,
      names.arg = months_list)
 
 
-#TODO: aggiungere colori, labels
-freq_age_month = barplot(table(data_u85$age_groups, data_u85$month),
-                         names.arg = months_list)
-
-#TODO: aggiungere colori, labels
-freq_age_month = barplot(table(tripdata_2019_r$usertype, tripdata_2019_r$month),
-                         names.arg=months_list,
-                         beside = TRUE)
-
 ```
 
 From these plots we can see an increment on the number of trips (and also on the average duration) during the warmer months.
 
 Now we check for the density distribution of the age groups over the months:
+
+```{r}
+par(mfrow=c(1,2))
+
+freq_age_month = barplot(table(data_u85$age_groups, data_u85$month),
+                         names.arg = months_list,
+                         col = viridis(4))
+
+legend("topleft", legend = c("1", "2", "3", "4"),
+       fill = viridis(4),
+       cex = 0.8)
+
+
+freq_age_month = barplot(table(tripdata_2019_r$usertype, tripdata_2019_r$month),
+                         names.arg=months_list,
+                         beside = TRUE,
+                         col = viridis(2))
+
+legend("topleft", legend = c("0: Customer", "1:Subscriber"),
+       fill = viridis(2),
+       cex = 0.8)
+
+```
 
 ```{r}
 c1 = density(data_u85[data_u85$age_groups == 1,]$month, adjust = 3.5)
@@ -478,14 +507,16 @@ hist = barplot(tab,
         ylab = "Freq",
         ylim=c(0, max(tab) + 100000),
         names.arg = c("Customer: 0", "Subscriber: 1"),
-        col = heat.colors(3))
+        col = viridis(3))
 
 legend("topleft", legend = c("Unknown", "Male", "Female"),
-       fill = heat.colors(3))
+       fill = viridis(3))
 
 text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
 ```
+
+BlueBikes seems to boast of loyal users.
 
 ```{r}
 tab_sex = as.data.frame(table(data_u85$gender))
@@ -524,9 +555,9 @@ polygon(den_subscriber, col = rgb(0, 0.9, 0, alpha = 0.6))
 
 From this analysis we would have expected the opposite result: We had foreseen a longer average duration of the trips by the subscribers. By checking the monthly and the annual membership plans on the BlueBikes site however, we've seen that both include unlimited 45-min rides. At this point we could assume that subscribers are more prone to take more, but shorter, trips.
 
-**Correlations**
+## **Correlations**
 
-Correlation, statistical measure used to quantify the strength of the linear relationship between two variables and compute their association. We are basically trying to observe the level of change in one variable due to the change in the other one.
+In this section we will use a tool named Correlation matrix in order to quantify the strength of the linear relationship between two variables. We are basically trying to observe the level of change in one variable due to the change in the other one.
 
 ```{r}
 percs = get_perc(mode = "10k")
@@ -535,10 +566,6 @@ data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
 res = rcorr(as.matrix(data_train))
-# Extract the correlation coefficients
-# -> res$r
-# Extract p-values
-# -> res$P
 ```
 
 ```{r}
@@ -756,7 +783,9 @@ plot_stats(tab_test_rf_age, mode="test", cf = T)
 precision_rf_age = round(precision(tab_test_rf_age),2)
 recall_rf_age = round(recall(tab_test_rf_age),2)
 
+```
 
+```{r}
 # Variable importance plot
 varImpPlot(rf_model)
 ```
@@ -858,6 +887,8 @@ recall_fda_age = round(recall(tab_test_fda_age),2)
 plot_stats(tab_test_fda_age, mode="test", cf = T)
 ```
 
+## Age group prediction results
+
 ```{r}
 ########### SUMMARY TAB AGE MODELS ###########################
 
@@ -907,10 +938,10 @@ barplot_prec_model_age = barplot(as.matrix(precision_age),
                           xlab = "Model name",
                           ylab = "Precision",
                           names.arg = vec_name_model,
-                          col = heat.colors(4))
+                          col = viridis(4))
 
 legend("topright", c("1", "2", "3", "4"),
-       fill = heat.colors(4), cex = 0.8)
+       fill = viridis(4), cex = 0.8)
 
 
 
@@ -920,10 +951,10 @@ barplot_rec_model_age = barplot(as.matrix(recall_age),
                           xlab = "Model name",
                           ylab = "Recall",
                           names.arg = vec_name_model,
-                          col = heat.colors(2))
+                          col = viridis(4))
 
 legend("topright", c("1", "2", "3", "4"),
-       fill = heat.colors(4), cex = 0.8)
+       fill = viridis(4), cex = 0.8)
 ```
 
 It is possible to see that the Random Forest is the most suitable model for our task. It provides both a quite good accuracy (compared with the other models), together with the highest values of precision and recall. However, we could try to improve the performance of this model via a majority voting ensemble, i.e. a model that combines the predictions from multiple other models.
@@ -977,19 +1008,18 @@ rf_model_three = randomForest(x = data_train_three,
                               y = as.factor(labels_train_three),
                               ntree = 50)
 
-#########################################################################
+```
 
-
-
+```{r}
 
 # --------------- LOAD TRAINED MODELS -------------- #
-rf_100 = readRDS('rf_best_ng_r_100p1.rda')
-rf_50 = readRDS('rf_best_ng_r_100p2.rda')
-rf_10 = readRDS('rf_best_ng_r_100p3.rda')
+rf_100 = readRDS(load_dataset("models","rf_best.rda"))
+rf_50 = readRDS(load_dataset("models", "rf_best_g_50.rda"))
+rf_10 = readRDS(load_dataset("models", "rf_best_g_10.rda"))
 # ------------------------------------------------- #
 
 
-####### PREDICT #########
+####### PREDICT TEST #########
 pred_1 = predict(rf_100, newdata = subset(data_test, select = -c(age_groups)))
 pred_2 = predict(rf_50, newdata = subset(data_test, select = -c(age_groups)))
 pred_3 = predict(rf_10, newdata = subset(data_test, select = -c(age_groups)))
@@ -1076,46 +1106,55 @@ for (i in (1:length(final))){
 a$fin = as.numeric(final)
 
 # test result
-res = table(a$fin, data_test$age_groups)
-plot_stats(res, cf = T)
+result_ensemble = table(a$fin, data_test$age_groups)
+plot_stats(result_ensemble, cf = T)
 ```
 
 ```{r}
-res = table(pred_1, data_test$age_groups)
-cool_cf(pred_1, data_test$age_groups)
-plot_stats(res, cf = T)
-
-
-res2 = table(pred_2, data_test$age_groups)
-cool_cf(pred_2, data_test$age_groups)
-plot_stats(res2, cf = T)
-
-
-res3 = table(pred_3, data_test$age_groups)
-cool_cf(pred_3, data_test$age_groups)
-plot_stats(res3, cf = T)
-
-#TODO: aggiungi CF del forest ensemble
-
+cool_cf(a$fin, data_test$age_groups)
 ```
 
 ```{r}
-pred_1 = predict(rf_model_one, newdata = data_test)
-pred_2 = predict(rf_model_two, newdata = data_test)
-pred_3 = predict(rf_model_three, newdata = data_test)
+precision_enseble = round(precision(result_ensemble),2)
+recall_ensemble = round(recall(result_ensemble),2)
+
+par(mfrow=c(1, 2))
+
+barplot_prec_ensemble = barplot(as.matrix(precision_enseble), 
+                          beside = T,
+                          main = "Precision",
+                          xlab = "Ensemble",
+                          ylab = "Precision",
+                          col = viridis(4))
+
+legend("topright", c("1", "2", "3", "4"),
+       fill = viridis(4), cex = 0.8)
 
 
-#Predicting the out of fold prediction probabilities for training data
-data_train_one$OOF_pred_rf<-rf_model_one$pred$Y[order(rf_model_one$pred$rowIndex)]
-trainSet$OOF_pred_knn<-model_knn$pred$Y[order(model_knn$pred$rowIndex)]
-trainSet$OOF_pred_lr<-model_lr$pred$Y[order(model_lr$pred$rowIndex)]
+barplot_rec_ensemble = barplot(as.matrix(recall_ensemble), 
+                          beside = T,
+                          main = "Recall",
+                          xlab = "Ensemble",
+                          ylab = "Recall",
+                          col = viridis(4))
 
-#Predicting probabilities for the test data
-testSet$OOF_pred_rf<-predict(model_rf,testSet[predictors],type='prob')$Y
-testSet$OOF_pred_knn<-predict(model_knn,testSet[predictors],type='prob')$Y
-testSet$OOF_pred_lr<-predict(model_lr,testSet[predictors],type='prob')$Y
+legend("topright", c("1", "2", "3", "4"),
+       fill = viridis(4), cex = 0.8)
 
 ```
+
+The esemble shreds the results of all previous models!
+
+|              |           |
+|:------------:|:---------:|
+| **Accuracy** | **86.05** |
+
+| Metric    | Group 1 | Group 2 | Group 3 | Group 4 |
+|-----------|---------|---------|---------|---------|
+| Precision | 75.6    | 88.98   | 97.44   | 98.91   |
+| Recall    | 96.69   | 83.92   | 81.24   | 64.7    |
+
+This model will be used to predict the age groups of the 2020 users.
 
 # GENDER
 
@@ -1152,6 +1191,8 @@ predictors(results)
 # plot the results
 plot(results, type=c("g", "o"))
 ```
+
+### GLM
 
 Since in this scenario we're considering just the classification wrt the gender, rather than using a multinomial logisic regression, we're using a simple glm
 
@@ -1192,6 +1233,9 @@ summary(glm_model_gender)
 ```{r}
 ########################## RAND FOREST #################################
 
+data_train = as.data.frame(full[1])
+data_test = as.data.frame(full[2])
+
 #our Y
 labels_train = data_train$gender
 labels_test = data_test$gender
@@ -1217,16 +1261,7 @@ plot_stats(tab_test_rf_gen, mode="test", cf = T)
 precision_rf_gen = round(precision(tab_test_rf_gen),2)
 recall_rf_gen = round(recall(tab_test_rf_gen),2)
 
-# Variable importance plot
-varImpPlot(rf_model)
 
-```
-
-```{r}
-rocs = multiclass.roc(as.numeric(labels_test), as.numeric(rf_model_pred))
-rs = rocs[["rocs"]]
-plot.roc(rs[[1]])
-sapply(1:length(rs),function(i) lines.roc(rs[[i]],col=i))
 ```
 
 ```{r}
@@ -1341,7 +1376,9 @@ recall_fda_gen = round(recall(tab_test_fda_gen),2)
 plot_stats(tab_test_fda_gen, cf = T)
 ```
 
-**Gender prediction results** As previously done with age groups, here we present the results obtained by each model, considering both the accuracy and the precision/recall.
+## Gender prediction results
+
+As previously done with age groups, here we present the results obtained by each model, considering both the accuracy and the precision/recall.
 
 ```{r}
 ########### SUMMARY TAB AGE MODELS ###########################
@@ -1395,10 +1432,10 @@ barplot_prec_model = barplot(as.matrix(precision_gen),
                           xlab = "Model name",
                           ylab = "Precision",
                           names.arg = vec_name_model,
-                          col = heat.colors(2))
+                          col = viridis(2))
 
 legend("topright", c("Male", "Female"),
-       fill = heat.colors(2), cex = 0.8)
+       fill = viridis(2), cex = 0.8)
 
 
 
@@ -1408,17 +1445,29 @@ barplot_rec_model = barplot(as.matrix(recall_gen),
                           xlab = "Model name",
                           ylab = "Recall",
                           names.arg = vec_name_model,
-                          col = heat.colors(2))
+                          col = viridis(2))
 
 legend("topright", c("Male", "Female"),
-       fill = heat.colors(2), cex = 0.8)
+       fill = viridis(2), cex = 0.8)
 ```
 
-# \############################### MAPS
+In this case a simple random forest outperform all the other methods:
 
-As mentioned in the introduction, the year 2020 brought changes that no one would have expected. This caused significant changes even in the habits of all of us. To compare some of the differences between the pre-pandemic and the post-pandemic users, we will we will dive into a deep exploration of the data related to the BlueBikes stations: their locations, the most used and also the most common path divided by age groups. In order to being able to visualize these informations in the most suitable way, we will use a combination of R and some scripts in Python: thanks to the Folium library we will be able to generate Boston's maps, pointing out all the points of interest, along with user's favorite paths.
+| **Accuracy** | **71.48** |
+|:------------:|:---------:|
 
-Here we first generate the tables with the most used stations, both sart and end ones.
+| Metric    | Male  | Female |
+|-----------|-------|--------|
+| Precision | 72.65 | 69.44  |
+| Recall    | 80.55 | 59.31  |
+
+In this case we consider the results obtained sufficiently high, thus we will not proceed with the construction of another meta-model. This model will be used to predict the gender of a user in the 2020.
+
+# MAPS
+
+As mentioned in the introduction, the year 2020 brought changes that no one would have expected. This caused significant changes even in the habits of all of us. To compare some of the differences between the pre-pandemic and the post-pandemic users, we will we will dive into a deep exploration of the data related to the BlueBikes stations: their locations, the most used and also the most common path divided by age groups. In order to be able to visualize these informations in the most suitable way, we will use a combination of R and some scripts in Python: thanks to the Folium library we will be able to generate Boston's maps, pointing out all the points of interest, along with user's favorite paths.
+
+Here we first generate the tables with the most used stations, both start and end ones.
 
 ```{r}
 data_u85 = tripdata_2019_r[tripdata_2019_r$age <= 85,]
@@ -1486,12 +1535,14 @@ bar = barplot(as.matrix(subset(start_tab, select = -c(start_name))),
         las=1,
         main = "TOP-10 Most used start station by age",
         space = c(0,3),
-        col = heat.colors(nrow(start_tab)))
+        col = viridis(nrow(start_tab)))
 
 legend("topright", legend = start_tab$start_name,
-       fill = heat.colors(nrow(start_tab)), cex = 0.8)
+       fill = viridis(nrow(start_tab)), cex = 0.8)
 
+```
 
+```{r}
 bar = barplot(as.matrix(subset(end_tab, select = -c(end_name))), 
         beside = T,
         cex.names = 1,
@@ -1499,11 +1550,10 @@ bar = barplot(as.matrix(subset(end_tab, select = -c(end_name))),
         las=1,
         main = "TOP-10 Most used end station by age",
         space = c(0,3),
-        col = heat.colors(nrow(start_tab)))
+        col = viridis(nrow(start_tab)))
 
 legend("topright", legend = end_tab$end_name,
-       fill = heat.colors(nrow(end_tab)), cex = 0.8)
-
+       fill = viridis(nrow(end_tab)), cex = 0.8)
 ```
 
 We now save this informations in a .csv file in order to use it in the Python script
@@ -1719,3 +1769,5 @@ for i in range(1,5):
   map_hooray.add_child(feature_group)
   map_hooray.save("BostonMap_age" + str(i) + ".html")
 ```
+
+## Map visualization
