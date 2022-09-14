@@ -251,7 +251,7 @@ data_u85_20$age_groups = cut(data_u85_20$age, breaks=split_ages, include.lowest 
 data_o85_20 = tripdata_2020_r[tripdata_2020_r$age > 85 | tripdata_2020_r$age == 0,]
 data_o85_20$age_groups = cut(data_o85_20$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
 
-data_u85_20 = subset(data_u85_20, select = -c(age, birth.year, year, start.station.name, end.station.name))
+data_u85_20 = subset(data_u85_20, select = -c(age, birth.year, year))
 data_o85_20 = subset(data_o85_20, select = -c(age, age_groups, birth.year, year, start.station.name, end.station.name))
 
 data_u85_20$tripduration = round(data_u85_20$tripduration/60,2)
@@ -649,7 +649,7 @@ data_f = rbind(data_gender, data_no_gender)
 ```
 
 ```{r}
-data = subset(tripdata_2020_r, select = c(age_groups,
+data = subset(data_u85_20, select = c(age_groups,
                                           start.station.name,
                                           start.station.latitude, 
                                           start.station.longitude,
@@ -725,52 +725,86 @@ legend("topright", legend = end_tab$end_name,
        fill = heat.colors(nrow(end_tab)), cex = 0.8)
 
 ```
-
-
 ```{r}
-tab = as.data.frame(table(data$age_groups, data$start.station.name, data$start.station.latitude))
-temp = order(colSums(tab), decreasing = T) #da errore 
-temp = as.data.frame(tab[,temp[1:10],])
+data_top = data[data$start.station.name %in% start_tab$start_name,]
+data_top = data[data$end.station.name %in% end_tab$end_name,]
 
-par(mar=c(4,16,4,0))
-barplot(temp,
-        beside=TRUE,
-        col = c("darkgrey", "darkblue", "red", "yellow"),
-        las=1,
-        cex.axis = 1,
-        horiz = TRUE
-        )
+tab = table(data_top$start.station.name, data_top$end.station.name, data_top$age_groups)
+tab = as.data.frame(tab)
+
+
+colnames(tab) = c('start_name', 'end_name', 'age', 'freq')
+for (idx in 1:nrow(tab)){
+  tab$start_longitude[idx] = data_top$start.station.longitude[data_top$start.station.name == tab$start_name[idx]][1]
+  tab$start_latitude[idx] = data_top$start.station.latitude[data_top$start.station.name == tab$start_name[idx]][1]
+  tab$end_longitude[idx] = data_top$end.station.longitude[data_top$end.station.name == tab$end_name[idx]][1]
+  tab$end_latitude[idx] = data_top$end.station.latitude[data_top$end.station.name == tab$end_name[idx]][1]
+}
+
+tmp = tab[tab$age==1,]
+out = tmp[order(tmp$freq, decreasing = T),][1:10,]
+for (i in 2:4){
+  print(i)
+  tmp = tab[tab$age==i,]
+  out = rbind(out, tmp[order(tmp$freq, decreasing = T),][1:10,])
+}
+
+write.csv(out, paste(getwd(), "SL_dataset/trips_age_20.csv", sep = "/"), row.names = FALSE)
 ```
 
 
 ```{r}
-temp$start.station.name[1]
-```
-
-```{r}
-map_start = subset(sub_data, select = c(start.station.name,
+map_start = subset(data_u85_20, select = c(start.station.name,
                                   start.station.latitude, 
                                   start.station.longitude))
 map_start = map_start[!duplicated(map_start[ , c("start.station.name")]),]
 map_start = map_start[map_start$start.station.name %in% start_tab$start_name,]
 
 
-map_end = subset(sub_data, select = c(end.station.name,
+map_end = subset(data_u85_20, select = c(end.station.name,
                                   end.station.latitude, 
                                   end.station.longitude))
 map_end = map_end[!duplicated(map_end[ , c("end.station.name")]),]
 map_end = map_end[map_end$end.station.name %in% end_tab$end_name,]
 
 
-
-pos_20 = cbind(map_start, 
+pos_19 = cbind(map_start, 
                end.station.name = map_end$end.station.name,
                end.station.latitude = map_end$end.station.latitude,
                end.station.longitude = map_end$end.station.longitude)
 
-write.csv(pos_20, paste(getwd(), "SL_dataset/2020_pos.csv", sep = "/"), row.names = FALSE)
+write.csv(pos_19, paste(getwd(), "SL_dataset/2019_pos.csv", sep = "/"), row.names = FALSE)
 ```
 
+
+
+```{r}
+## ------------------------ TOP 10 TRIP BY AGE ----------------------------- ##
+data_top = data[data$start.station.name %in% start_tab$start_name,]
+data_top = data[data_top$end.station.name %in% end_tab$end_name,]
+
+tab = table(data_top$start.station.name, data_top$end.station.name, data_top$age_groups)
+tab = as.data.frame(tab)
+
+
+colnames(tab) = c('start_name', 'end_name', 'age', 'freq')
+for (idx in 1:nrow(tab)){
+  tab$start_longitude[idx] = data_top$start.station.longitude[data_top$start.station.name == tab$start_name[idx]][1]
+  tab$start_latitude[idx] = data_top$start.station.latitude[data_top$start.station.name == tab$start_name[idx]][1]
+  tab$end_longitude[idx] = data_top$end.station.longitude[data_top$end.station.name == tab$end_name[idx]][1]
+  tab$end_latitude[idx] = data_top$end.station.latitude[data_top$end.station.name == tab$end_name[idx]][1]
+}
+
+tmp = tab[tab$age==1,]
+out = tmp[order(tmp$freq, decreasing = T),][1:10,]
+for (i in 2:4){
+  print(i)
+  tmp = tab[tab$age==i,]
+  out = rbind(out, tmp[order(tmp$freq, decreasing = T),][1:10,])
+}
+
+write.csv(out, paste(getwd(), "SL_dataset/trips_age_20.csv", sep = "/"), row.names = FALSE)
+```
 
 ```{python}
 import pandas as pd
@@ -778,10 +812,58 @@ import numpy as np
 import folium
 import webbrowser
 
-df_acc = pd.read_csv('C:/Users/39345/Desktop/SL_project/SL_dataset/2020_pos.csv', dtype=object)
+df_acc = pd.read_csv("C:/Users/andre/OneDrive/Desktop/SL_project/SL_project/SL_dataset/trips_age_20.csv", dtype=object)
 
+df_acc['start_name'] = df_acc['start_name'].astype(str)
+df_acc['end_name'] = df_acc['end_name'].astype(str)
+
+df_acc['age'] = df_acc['age'].astype(int)
+df_acc['freq'] = df_acc['freq'].astype(int)
+
+df_acc['start_longitude'] = df_acc['start_longitude'].astype(float)
+df_acc['start_latitude'] = df_acc['start_latitude'].astype(float)
+
+df_acc['end_longitude'] = df_acc['end_longitude'].astype(float)
+df_acc['end_latitude'] = df_acc['end_latitude'].astype(float)
+
+for i in range(3,4):
+  print(i)
+  map_hooray = folium.Map(location=[42.361145, -71.057083], zoom_start = 12) 
+  feature = "TripStart_" + str(i)
+  
+  fil = df_acc[df_acc['age'] == i]
+  feature_group = folium.FeatureGroup(feature)
+  
+  s_lat = fil['start_latitude']
+  s_lng = fil['start_longitude']
+  s_name = fil['start_name']
+  
+  e_lat = fil['end_latitude']
+  e_lng = fil['end_longitude']
+  e_name = fil['end_name']
+  
+  
+  for s_lat, s_lng, s_name, e_lat, e_lng, e_name in zip(s_lat, s_lng, s_name, e_lat, e_lng, e_name):
+      feature_group.add_child(folium.Marker(location=[s_lat,s_lng], popup=s_name, icon=folium.Icon(color="blue")))
+      feature_group.add_child(folium.Marker(location=[e_lat,e_lng], popup=e_name, icon=folium.Icon(color="orange")))
+      
+      folium.PolyLine( [[s_lat, s_lng],[e_lat, e_lng]] ).add_to(map_hooray)
+      
+
+  map_hooray.add_child(feature_group)
+  map_hooray.save("test_" + str(i) + ".html")
+```
+
+```{python}
+import pandas as pd
+import numpy as np
+import folium
+import webbrowser
+
+df_acc = pd.read_csv('C:/Users/andre/OneDrive/Desktop/SL_project/SL_project/SL_dataset/2020_pos.csv', dtype=object)
+
+# ----------------------------- START ----------------------------------------- #
 map_hooray = folium.Map(location=[42.361145, -71.057083], zoom_start = 12) 
-
 df_acc['start.station.name'] = df_acc['start.station.name'].astype(str)
 df_acc['start.station.latitude'] = df_acc['start.station.latitude'].astype(float)
 df_acc['start.station.longitude'] = df_acc['start.station.longitude'].astype(float)
@@ -796,8 +878,28 @@ for lt, lg, nm in zip(lat, lng, name):
     feature_group.add_child(folium.Marker(location=[lt,lg],popup=nm,icon=folium.Icon(color="blue")))
 
 map_hooray.add_child(feature_group)
+map_hooray.save("BostonMap_top10_start_20.html")
+# ----------------------------- START ----------------------------------------- # 
 
-map_hooray.save("BostonMap_2020.html")
+
+# ----------------------------- END ----------------------------------------- #
+map_hooray = folium.Map(location=[42.361145, -71.057083], zoom_start = 12) 
+df_acc['end.station.name'] = df_acc['end.station.name'].astype(str)
+df_acc['end.station.latitude'] = df_acc['end.station.latitude'].astype(float)
+df_acc['end.station.longitude'] = df_acc['end.station.longitude'].astype(float)
+
+
+feature_group = folium.FeatureGroup("LocationsStart")
+lat = df_acc['end.station.latitude']
+lng = df_acc['end.station.longitude']
+name = df_acc['end.station.name']
+
+for lt, lg, nm in zip(lat, lng, name):
+    feature_group.add_child(folium.Marker(location=[lt,lg],popup=nm,icon=folium.Icon(color="orange")))
+
+map_hooray.add_child(feature_group)
+map_hooray.save("BostonMap_top10_end_20.html")
+# ----------------------------- END ----------------------------------------- #
 ```
 
 
@@ -805,20 +907,21 @@ map_hooray.save("BostonMap_2020.html")
 tab = as.data.frame(table(data$age_groups, data$start.station.name))
 colnames(tab) = c("age_groups", "start.station.name", "freq")
 
+one = tab[tab$age_groups == 1,]
+temp = one[order(one$freq, decreasing = T),][1:10,]
 
-for (idx in 1:length(split_ages)){
-  if (idx == 1){
-    one = tab[tab$age_groups == 1,]
-    temp = one[order(one$freq, decreasing = T),][1:10,]
-  }
-  
-  other = tab[tab$age_groups == idx,]
-  temp = rbind(temp, (other[order(other$freq, decreasing = T),][1:10,]))
-}
+two = tab[tab$age_groups == 2,]
+temp = rbind(temp, (two[order(two$freq, decreasing = T),][1:10,]))
 
+three = tab[tab$age_groups == 3,]
+temp = rbind(temp, (three[order(three$freq, decreasing = T),][1:10,]))
+
+four = tab[tab$age_groups == 4,]
+temp = rbind(temp, (four[order(four$freq, decreasing = T),][1:10,]))
 
 temp$lat = NA
 temp$long = NA
+temp = as.data.frame(temp)
 
 for (idx in 1:nrow(temp)){
   name = temp$start.station.name[idx]
@@ -831,10 +934,9 @@ for (idx in 1:nrow(temp)){
 write.csv(temp, paste(getwd(), "SL_dataset/start_station_by_age_20.csv", sep = "/"), row.names = FALSE)
 ```
 
-
-
 ```{python}
-df_acc = pd.read_csv('C:/Users/39345/Desktop/SL_project/SL_dataset/start_station_by_age_20.csv', dtype=object)
+
+df_acc = pd.read_csv('SL_dataset/start_station_by_age_20.csv', dtype=object)
 
 df_acc['start.station.name'] = df_acc['start.station.name'].astype(str)
 df_acc['age_groups'] = df_acc['age_groups'].astype(int)
@@ -843,7 +945,7 @@ df_acc['lat'] = df_acc['lat'].astype(float)
 df_acc['long'] = df_acc['long'].astype(float)
 
 
-for i in range(1, 8):
+for i in range(1,5):
   map_hooray = folium.Map(location=[42.361145, -71.057083], zoom_start = 12) 
   feature = "LocationsStart_" + str(i)
   
@@ -860,10 +962,11 @@ for i in range(1, 8):
   
   
   map_hooray.add_child(feature_group)
-  map_hooray.save("BostonMap_age_2020_" + str(i) + ".html")
+  map_hooray.save("BostonMap_age" + str(i) + "_20.html")
 
 ```
 
-```{r}
-rstudio_viewer("BostonMap_age1.html", getwd())
-```
+
+
+
+
