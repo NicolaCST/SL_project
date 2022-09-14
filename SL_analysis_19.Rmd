@@ -323,10 +323,136 @@ cool_cf <- function(pred, true){
   
 }
 
-
 ```
 
-**Data Load**
+#### 2019 Dataset preparation
+
+```{r}
+################################## 2019 ###########################################
+tripdata_2019_r = read.csv(
+  load_dataset("SL_dataset", "bluebikes_tripdata_2019.csv"))
+
+colnames(tripdata_2019_r)
+rm(tripdata_2019)
+
+# Control the number of trip longer than 1H and shorter than 1m
+nrow(tripdata_2019_r[tripdata_2019_r$tripduration>3600,])
+nrow(tripdata_2019_r[tripdata_2019_r$tripduration<60,])
+
+# Split timestamp in date - time Then split date in y/m/d
+tripdata_2019_r = tidyr::separate(tripdata_2019_r, starttime,
+                                  c("startdate", "starttime"), sep = " ")
+tripdata_2019_r = tidyr::separate(tripdata_2019_r, startdate, 
+                                  c("syear", "startmonth", "startday"), sep = "-")
+tripdata_2019_r = tidyr::separate(tripdata_2019_r, stoptime,
+                                  c("stopdate", "stoptime"), sep = " ")
+tripdata_2019_r = tidyr::separate(tripdata_2019_r, stopdate,
+                                  c("stopyear", "stopmonth", "stopday"), sep = "-")
+
+# Remove redundant informations
+tripdata_2019_r = subset(tripdata_2019_r, select = -c(syear, stopyear))
+
+
+#removed all the trips that started in a month and finished in the next one
+between_month = 
+  nrow(tripdata_2019_r[tripdata_2019_r$startmonth != tripdata_2019_r$stopmonth,])
+
+ratio = round(
+  (as.integer(between_month) / as.integer(nrow(tripdata_2019_r))) * 100, 3)
+
+tripdata_2019_r = subset(tripdata_2019_r, select = -c(stopmonth, startmonth))
+
+
+# Convert time to sec [starting from midnight]
+tripdata_2019_r$starttime = hms(tripdata_2019_r$starttime)
+tripdata_2019_r$starttime = as.numeric(tripdata_2019_r$starttime)
+tripdata_2019_r$starttime = round(tripdata_2019_r$starttime,0)
+
+tripdata_2019_r$stoptime = hms(tripdata_2019_r$stoptime)
+tripdata_2019_r$stoptime = as.numeric(tripdata_2019_r$stoptime)
+tripdata_2019_r$stoptime = round(tripdata_2019_r$stoptime,0)
+
+# Age field creation
+tripdata_2019_r$age = tripdata_2019_r$year - tripdata_2019_r$birth.year
+
+# Removed NUll Island
+tripdata_2019_r = tripdata_2019_r[tripdata_2019_r$start.station.latitude > 1 &                                       tripdata_2019_r$end.station.latitude >1,]
+
+
+#Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
+tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Subscriber"] = 1
+tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Customer"] = 0
+
+
+write.csv(tripdata_2019_r,
+          "C:/Users/Utente/Desktop/SL_project/tripdata_2019_r.csv", 
+          row.names = FALSE)
+```
+
+#### 2020 Dataset preparation
+
+Repeat the same exact procedure used in the 2019
+
+```{r}
+
+tripdata_2020_r = read.csv(
+  load_dataset("SL_dataset", "bluebikes_tripdata_2020.csv"))
+
+
+tripdata_2020_r = subset(tripdata_2020_r, select = -c(postal.code))
+colnames(tripdata_2020_r)
+
+# Control the number of trip longer than 1H and shorter than 1m
+nrow(tripdata_2020_r[tripdata_2020_r$tripduration>3600,])
+nrow(tripdata_2020_r[tripdata_2020_r$tripduration<60,])
+
+# Split timestamp in date - time Then split date in y/m/d
+tripdata_2020_r = tidyr::separate(tripdata_2020_r, starttime, 
+                                  c("startdate", "starttime"), sep = " ")
+tripdata_2020_r = tidyr::separate(tripdata_2020_r, startdate,
+                                  c("syear", "startmonth", "startday"), sep = "-")
+tripdata_2020_r = tidyr::separate(tripdata_2020_r, stoptime, 
+                                  c("stopdate", "stoptime"), sep = " ")
+tripdata_2020_r = tidyr::separate(tripdata_2020_r, stopdate, 
+                                  c("stopyear", "stopmonth", "stopday"), sep = "-")
+
+# Remove redundant informations
+tripdata_2020_r = subset(tripdata_2020_r, select = -c(syear, stopyear))
+
+between_month = nrow(
+  tripdata_2020_r[tripdata_2020_r$startmonth != tripdata_2020_r$stopmonth,])
+
+ratio = round(
+  (as.integer(between_month) / as.integer(nrow(tripdata_2020_r))) * 100, 3)
+
+tripdata_2020_r = subset(tripdata_2020_r, select = -c(stopmonth, startmonth))
+
+# Convert time to sec [starting from midnight]
+tripdata_2020_r$starttime = hms(tripdata_2020_r$starttime)
+tripdata_2020_r$starttime = as.numeric(tripdata_2020_r$starttime)
+tripdata_2020_r$starttime = round(tripdata_2020_r$starttime,0)
+
+tripdata_2020_r$stoptime = hms(tripdata_2020_r$stoptime)
+tripdata_2020_r$stoptime = as.numeric(tripdata_2020_r$stoptime)
+tripdata_2020_r$stoptime = round(tripdata_2020_r$stoptime,0)
+
+#Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
+tripdata_2020_r$gender[is.na(tripdata_2020_r$gender)] = 0
+tripdata_2020_r$birth.year[is.na(tripdata_2020_r$birth.year)] = 0
+
+tripdata_2020_r$age = tripdata_2020_r$year - tripdata_2020_r$birth.year
+tripdata_2020_r$age[tripdata_2020_r$age == 2020] = 0
+tripdata_2020_r = tripdata_2020_r[tripdata_2020_r$start.station.latitude > 1 & tripdata_2020_r$end.station.latitude >1,]
+
+tripdata_2020_r$usertype[tripdata_2020_r$usertype == "Subscriber"] = 1
+tripdata_2020_r$usertype[tripdata_2020_r$usertype == "Customer"] = 0
+
+write.csv(
+  tripdata_2020_r, "C:/Users/Utente/Desktop/SL_project/tripdata_2020_r.csv", 
+  row.names = FALSE)
+```
+
+### **Data Load**
 
 Here we load and shuffle the dataset for the 2019
 
@@ -335,7 +461,7 @@ tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 tripdata_2019_r = tripdata_2019_r[sample(1:nrow(tripdata_2019_r)),]
 ```
 
-**EDA on 2019**
+### **EDA on 2019**
 
 As mentioned in the Preprocessing section, it is possible to see some outliers in the age field (probably mainly caused by the users during the registration to the system)
 
@@ -624,6 +750,7 @@ barplot(d$Freq,
         names.arg = d$Var1,
         col = 'lightblue')
 ```
+
 ```{r}
 d
 tab = table(data_u85$age_groups,data_u85$dayname)
@@ -1803,3 +1930,45 @@ for i in range(1,5):
 ```
 
 ## Map visualization
+
+-   Charlestown, North End: oldest residential neighborhood, filled with old buildings dating from 100 or more years ago, sleek condos, stunning waterfront views, plus several wonderful hotels.
+
+-   West End: Boston's top museums, concert halls, sports venues, and nightlife.
+
+-   Downtown: Financial district.
+
+-   Cambridge: Boston's top universities and colleges.
+
+-   Black Bay: historic district
+
+![Boston districts: Charlestown - Orange, North End - Green, West End - Yellow, Cambridge - Blue, Downtown - Purple, Black Bay - dark green](images/hood.png)
+
+### Most used stations
+
+Here we plot the Top-10 most used stations for each age group.
+
+-   Group 1: as expected, the most used stations by this group of people is strictly related to the university district
+
+-   Group 2: even if most of the stations are located in the Cambridge district, there are two that are located in different places. We can find one in the financial district, and the other one in the Black Bay
+
+-   Group 3-4: this group of people seems to frequent the south-east side. Which is reasonable since in this side there is the city center along with the majority of hospitals and clinics.
+
+![Top 10 most used stations by age group](images/trip_age_19-02.png)
+
+### Most common trips
+
+#### Group 1
+
+![](images/crop1_19.png)
+
+### Group 2
+
+![](images/crop2_19.png)
+
+### Group 3
+
+![](images/crop3_19.png)
+
+### Group 4
+
+![](images/crop4_19.png)
