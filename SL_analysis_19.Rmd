@@ -368,8 +368,8 @@ data_u85$age_groups = cut(data_u85$age, breaks=split_ages, include.lowest = TRUE
 data_o85 = tripdata_2019_r[tripdata_2019_r$age > 85,]
 data_o85$age_groups = 0
 
-data_u85 = subset(data_u85, select = -c(age, birth.year, year, start.station.name, end.station.name))
-data_o85 = subset(data_o85, select = -c(age, birth.year, year, start.station.name, end.station.name))
+data_u85 = subset(data_u85, select = -c(age, birth.year, year))
+data_o85 = subset(data_o85, select = -c(age, birth.year, year))
 
 data_u85$tripduration = round(data_u85$tripduration/60,2)
 data_u85$starttime = round(data_u85$starttime/60,2)
@@ -935,7 +935,7 @@ To build a solid meta-model, we first sampled a larger dataset and then we train
 ```{r}
 ####################### FULL TRAIN ######################################
 
-percs = get_perc(mode = "100k")
+percs = get_perc(mode = "50k")
 
 one = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
 data_train = as.data.frame(one[[1]])
@@ -990,9 +990,9 @@ rf_10 = readRDS('rf_best_ng_r_100p3.rda')
 
 
 ####### PREDICT #########
-pred_1 = predict(rf_100, newdata = subset(data_test_diff, select = -c(age_groups)))
-pred_2 = predict(rf_50, newdata = subset(data_test_diff, select = -c(age_groups)))
-pred_3 = predict(rf_10, newdata = subset(data_test_diff, select = -c(age_groups)))
+pred_1 = predict(rf_100, newdata = subset(data_test, select = -c(age_groups)))
+pred_2 = predict(rf_50, newdata = subset(data_test, select = -c(age_groups)))
+pred_3 = predict(rf_10, newdata = subset(data_test, select = -c(age_groups)))
 
 a = as.data.frame(pred_1)
 colnames(a) = c("pred_a")
@@ -1015,9 +1015,9 @@ pred_1a = (a$pred_a)
 pred_2a = (a$pred_b)
 pred_3a = (a$pred_c)
 
-df_prob_1 = as.data.frame(predict(rf_100, newdata=subset(data_test_diff, select = -c(age_groups)), type='prob'))
-df_prob_2 = as.data.frame(predict(rf_50, newdata=subset(data_test_diff, select = -c(age_groups)), type='prob'))
-df_prob_3 = as.data.frame(predict(rf_10, newdata=subset(data_test_diff, select = -c(age_groups)), type='prob'))
+df_prob_1 = as.data.frame(predict(rf_100, newdata=subset(data_test, select = -c(age_groups)), type='prob'))
+df_prob_2 = as.data.frame(predict(rf_50, newdata=subset(data_test, select = -c(age_groups)), type='prob'))
+df_prob_3 = as.data.frame(predict(rf_10, newdata=subset(data_test, select = -c(age_groups)), type='prob'))
 
 final = vector(mode="list", length = length(pred_1a))
 w_class = c(0.48, 0.72, 0.79, 0.98)
@@ -1076,7 +1076,7 @@ for (i in (1:length(final))){
 a$fin = as.numeric(final)
 
 # test result
-res = table(a$fin, data_test_diff$age_groups)
+res = table(a$fin, data_test$age_groups)
 plot_stats(res, cf = T)
 ```
 
