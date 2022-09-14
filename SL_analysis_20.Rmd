@@ -436,36 +436,6 @@ tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 ```
 
 
-```{r}
-######### JOIN 2019 ###############
-
-data_u85_20_19 = tripdata_2019_r[tripdata_2019_r$age <= 85,]
-data_u85_20_19$age_groups = cut(data_u85_20_19$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
-
-data_u85_20_19 = subset(data_u85_20_19, select = -c(age, birth.year, year, start.station.name, end.station.name))
-
-data_u85_20_19$tripduration = round(data_u85_20_19$tripduration/60,2)
-data_u85_20_19$starttime = round(data_u85_20_19$starttime/60,2)
-data_u85_20_19$stoptime = round(data_u85_20_19$stoptime/60,2)
-
-data_u85_20_19[c("tripduration", "starttime", "stoptime")] = lapply(data_u85_20_19[c("tripduration", "starttime", "stoptime")], nor)
-
-data_u85_20_19 = data_u85_20_19 %>% drop_na()
-
-
-#table(data_u85_20_20$gender, data_u85_20_20$age_groups)
-
-
-data_u85_20 = rbind(data_u85_20, data_u85_20_19)
-data_u85_20 = subset(data_u85_20, select = -c(gender))
-data_o85_20 = subset(data_o85_20, select = -c(gender))
-```
-
-```{r}
-data_u85_20 = rbind(data_u85_20, data_u85)
-```
-
-
 #Let's try to predict the 0-age  and >80 age
 ```{r}
 #TODO: vedere che fare con sta roba
@@ -571,6 +541,7 @@ rm(b,c)
 pred_1a = (a$pred_a)
 pred_2a = (a$pred_b)
 pred_3a = (a$pred_c)
+
 df_prob_1 = as.data.frame(predict(rf_100, newdata=subset(data_u85_20, select = -c(age_groups)), type='prob'))
 df_prob_2 = as.data.frame(predict(rf_50, newdata=subset(data_u85_20, select = -c(age_groups)), type='prob'))
 df_prob_3 = as.data.frame(predict(rf_10, newdata=subset(data_u85_20, select = -c(age_groups)), type='prob'))
