@@ -601,7 +601,7 @@ There are three strategies of stepwise regression:
 
 -   Forward selection: which starts with no predictors in the model, iteratively adds the most contributive predictors, and stops when the improvement is no longer statistically significant.
 
--    Backward selection: (or backward elimination), which starts with all predictors in the model (full model), iteratively removes the least contributive predictors, and stops when you have a model where all predictors are statistically significant.
+-   Backward selection: (or backward elimination), which starts with all predictors in the model (full model), iteratively removes the least contributive predictors, and stops when you have a model where all predictors are statistically significant.
 
 -   Stepwise selection: which is a combination of forward and backward selections.
 
@@ -689,9 +689,12 @@ plot_stats(tab_train, mode="train", cf = F)
 
 ## TEST SET
 pred = predict(multinom_age_model, newdata = data_test)
-tab_test_mlr = table(pred, data_test$age_groups)
+tab_test_mlr_age = table(pred, data_test$age_groups)
 
-plot_stats(tab_test_mlr, cf = T)
+precision_mlr_age = round(precision(tab_test_mlr_age),2)
+recall_mlr_age = round(recall(tab_test_mlr_age),2)
+
+plot_stats(tab_test_mlr_age, cf = T)
 
 cool_cf(pred, data_test$age_groups)
 ```
@@ -718,7 +721,7 @@ plot_stats(tab_test_knn, cf = T)
 ```
 
 ```{r}
-percs = get_perc(mode = "100k")
+percs = get_perc(mode = "50k")
 
 one = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
 data_train = as.data.frame(one[[1]])
@@ -767,8 +770,11 @@ tab_train_rf = table(rf_model_pred_train, labels_train)
 plot_stats(tab_train_rf, mode="train", cf = F)
   
 # test result
-tab_test_rf = table(rf_model_pred, labels_test)
-plot_stats(tab_test_rf, mode="test", cf = T)
+tab_test_rf_age = table(rf_model_pred, labels_test)
+plot_stats(tab_test_rf_age, mode="test", cf = T)
+
+precision_rf_age = round(precision(tab_test_rf_age),2)
+recall_rf_age = round(recall(tab_test_rf_age),2)
 
 
 # Variable importance plot
@@ -797,42 +803,6 @@ tab = table(pred, labels_new)
 plot_stats(tab, cf = T)
 ```
 
-```{r}
-library(e1071)
-
-data_train = data_train[sample(nrow(data_train), (nrow(data_train)/2)), ]
-
-svm_model <- svm(x = data_train[,1:12],
-            y = as.factor(data_train[,13]),
-            method="C-classification", 
-            kernal="radial", 
-            cost=20,
-            probability=TRUE,
-            class.weights = c("1" = 1, "2" = 1, "3" = 1, "4" = 10))
-
-## TRAIN SET
-pred_train = predict(svm_model, newdata = subset(data_train, select = -c(age_groups)))
-tab_train_svm = table(pred_train, data_train$age_groups)
-
-plot_stats(tab_train_svm, mode = "train", cf = T)
-
-
-## TEST SET
-pred = predict(svm_model, newdata = subset(data_test, select = -c(age_groups)))
-tab_test_svm = table(pred, data_test$age_groups)
-
-plot_stats(tab_test_svm, cf = T)
-```
-
-```{r}
-svm_model_w = readRDS("C:/Users/39345/Desktop/SL_project/svm_customW.rda")
-
-#-------------------------------------------
-pred_w = predict(svm_model_w, newdata = subset(data_test, select = -c(age_groups)))
-tab_test_svm_w = table(pred_w, data_test$age_groups)
-plot_stats(tab_test_svm_w, cf = T)
-
-```
 
 ## Discriminant Analysis
 
@@ -840,14 +810,17 @@ Discriminant analysis is used to predict the probability of belonging to a given
 
 -   Linear discriminant analysis (LDA): Uses linear combinations of predictors to predict the class of a given observation. Assumes that the predictor variables (p) are normally distributed and the classes have identical variances or identical covariance matrices.
 
--   Quadratic discriminant analysis (QDA): More flexible than LDA. Here, there is no assumption that the covariance matrix of classes is the same.
-
 -   Mixture discriminant analysis (MDA): Each class is assumed to be a Gaussian mixture of subclasses.
+
+-   Quadratic discriminant analysis (QDA): More flexible than LDA. Here, there is no assumption that the covariance matrix of classes is the same.
 
 -   Flexible Discriminant Analysis (FDA): Non-linear combinations of predictors is used.
 
 ```{r}
 ################### LDA ################################
+
+data_train = full[[1]]
+data_test = full[[2]]
 
 # Fit the model
 lda_model = lda(age_groups~., data = data_train)
@@ -859,9 +832,12 @@ plot_stats(tab_train, mode="train", cf = F)
 
 ## TEST SET
 pred = predict(lda_model, newdata = data_test)
-tab_test_lda = table(pred$class, data_test$age_groups)
+tab_test_lda_age = table(pred$class, data_test$age_groups)
 
-plot_stats(tab_test_lda, cf = T)
+precision_lda_age = round(precision(tab_test_lda_age),2)
+recall_lda_age = round(recall(tab_test_lda_age),2)
+
+plot_stats(tab_test_lda_age, cf = T)
 ```
 
 ```{r}
@@ -874,9 +850,12 @@ tab_train_mda = table(pred_mda_train, data_train$age_groups)
 plot_stats(tab_train_mda, mode="train", cf = F)
 
 pred_mda_test = mixture_model %>% predict(data_test)
-tab_test_mda = table(pred_mda_test, data_test$age_groups)
-plot_stats(tab_test_mda, mode="test", cf = T)
+tab_test_mda_age = table(pred_mda_test, data_test$age_groups)
 
+precision_mda_age = round(precision(tab_test_mda_age),2)
+recall_mda_age = round(recall(tab_test_mda_age),2)
+
+plot_stats(tab_test_mda_age, mode="test", cf = T)
 ```
 
 ```{r}
@@ -889,8 +868,12 @@ tab_train_qda = table(pred_qda_train$class, data_train$age_groups)
 plot_stats(tab_train_qda, mode="train", cf = F)
 
 pred_qda_test = quadratic_model %>% predict(data_test)
-tab_test_qda = table(pred_qda_test$class, data_test$age_groups)
-plot_stats(tab_test_qda, mode="test", cf = T)
+tab_test_qda_age = table(pred_qda_test$class, data_test$age_groups)
+
+precision_qda_age = round(precision(tab_test_qda_age),2)
+recall_qda_age = round(recall(tab_test_qda_age),2)
+
+plot_stats(tab_test_qda_age, mode="test", cf = T)
 ```
 
 ```{r}
@@ -903,23 +886,27 @@ tab_train_fda = table(pred_fda_train, data_train$age_groups)
 plot_stats(tab_train_fda, mode="train", cf = F)
 
 pred_fda_test = fda_model %>% predict(data_test)
-tab_test_fda = table(pred_fda_test, data_test$age_groups)
-plot_stats(tab_test_fda, mode="test", cf = T)
+tab_test_fda_age = table(pred_fda_test, data_test$age_groups)
+
+precision_fda_age = round(precision(tab_test_fda_age),2)
+recall_fda_age = round(recall(tab_test_fda_age),2)
+
+plot_stats(tab_test_fda_age, mode="test", cf = T)
 ```
 
 ```{r}
 ########### SUMMARY TAB AGE MODELS ###########################
 
-#vec_name_model = c("MLR", "KNN", "RF", "LDA", "MDA", "QDA", "RDA")
-vec_name_model = c("MLR", "RF", "LDA", "MDA", "QDA", "RDA")
+#vec_name_model = c("MLR", "KNN", "RF", "LDA", "MDA", "QDA", "FDA")
+vec_name_model = c("MLR", "RF", "LDA", "MDA", "QDA", "FDA")
 
-vec_acc_model = c((round(accuracy(tab_test_mlr),2)),
+vec_acc_model = c((round(accuracy(tab_test_mlr_age),2)),
                   #(round(accuracy(tab_test_knn),2)),
-                  (round(accuracy(tab_test_rf),2)),
-                  (round(accuracy(tab_test_lda),2)),
-                  (round(accuracy(tab_test_mda),2)),
-                  (round(accuracy(tab_test_qda),2)),
-                  (round(accuracy(tab_test_fda),2)))
+                  (round(accuracy(tab_test_rf_age),2)),
+                  (round(accuracy(tab_test_lda_age),2)),
+                  (round(accuracy(tab_test_mda_age),2)),
+                  (round(accuracy(tab_test_qda_age),2)),
+                  (round(accuracy(tab_test_fda_age),2)))
 
 
 tab_accuracy_models = data.frame(vec_name_model, vec_acc_model)
@@ -933,12 +920,53 @@ barplot_acc_model = barplot(tab_accuracy_models$vec_acc_model,
 
 ```
 
+
+```{r}
+precision_age= cbind(data.frame(precision_mlr_age), 
+                      data.frame(precision_rf_age),
+                      data.frame(precision_lda_age),
+                      data.frame(precision_mda_age),
+                      data.frame(precision_qda_age),
+                      data.frame(precision_fda_age))
+
+recall_age = cbind(data.frame(recall_mlr_age), 
+                  data.frame(recall_rf_age),
+                  data.frame(recall_lda_age),
+                  data.frame(recall_mda_age),
+                  data.frame(recall_qda_age),
+                  data.frame(recall_fda_age))
+
+par(mfrow=c(1,2))
+
+barplot_prec_model_age = barplot(as.matrix(precision_age), 
+                          beside = T,
+                          main = "Precision on AGE GROUPS",
+                          xlab = "Model name",
+                          ylab = "Precision",
+                          names.arg = vec_name_model,
+                          col = heat.colors(4))
+
+legend("topright", c("1", "2", "3", "4"),
+       fill = heat.colors(4), cex = 0.8)
+
+
+
+barplot_rec_model_age = barplot(as.matrix(recall_age), 
+                          beside = T,
+                          main = "Recall on AGE GROUPS",
+                          xlab = "Model name",
+                          ylab = "Recall",
+                          names.arg = vec_name_model,
+                          col = heat.colors(2))
+
+legend("topright", c("1", "2", "3", "4"),
+       fill = heat.colors(4), cex = 0.8)
+```
 It is possible to see that the Random Forest is the most suitable model for our task. However, we could improve the performance of our model via a majority voting ensemble, i.e. a model that combines the predictions from multiple other models.
 
-
 ### Majority-voting ensemble random forest
-To build a solid meta-model, we first sampled a larger dataset and then we trained three different random forest with different params. 
-The final predictions are based on a class-weighted majority voting system (to each class corresponds a certain weight which is inversely proportional to the number of data available for that class)
+
+To build a solid meta-model, we first sampled a larger dataset and then we trained three different random forest with different params. The final predictions are based on a class-weighted majority voting system (to each class corresponds a certain weight which is inversely proportional to the number of data available for that class)
 
 ```{r}
 ####################### FULL TRAIN ######################################
@@ -1125,12 +1153,13 @@ testSet$OOF_pred_lr<-predict(model_lr,testSet[predictors],type='prob')$Y
 
 ```
 
-
-
 # GENDER
+
 To predict the gender of a user, we used the same workflow shown in the age group section. Here's a brief recap:
-- Backward feature selection (the features removed are the same of the previous analysis)
-- Models (RF, KNN, Discriminant Analysis)
+
+-   Backward feature selection (the features removed are the same of the previous analysis)
+
+-   Models (GLM, RF, KNN, Discriminant Analysis)
 
 ```{r}
 ####### BACKW FEATURE SELECTION ###################
@@ -1160,9 +1189,10 @@ predictors(results)
 plot(results, type=c("g", "o"))
 ```
 
+Since in this scenario we're considering just the classification wrt the gender, rather than using a multinomial logisic regression, we're using a simple glm
 
 ```{r}
-###################### MULTINOM #######################
+###################### GLM #######################
 
 percs = get_perc(mode = "50k")
 
@@ -1170,22 +1200,29 @@ full = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
+data_train$gender[data_train$gender == 1] = 0
+data_train$gender[data_train$gender == 2] = 1
+
+data_test$gender[data_test$gender == 1] = 0
+data_test$gender[data_test$gender == 2] = 1
+
 # Fit the model
-multinom_gender_model = multinom(gender ~., data = data_train)
+glm_model_gender = glm(gender ~., data = data_train, family = binomial)
 
-pred = predict(multinom_gender_model, newdata = data_train)
-tab_train = table(pred, data_train$gender)
+#Converting the prediction in {0,1} according to the chosen threshold:
+pred_glm_gender = predict(glm_model_gender, data_test, type = "response")
+pred_glm_compl = ifelse(pred_glm_gender > 0.6, 1, 0)
 
-plot_stats(tab_train, mode="train", cf = F)
 
-## TEST SET
-pred = predict(multinom_gender_model, newdata = data_test)
-tab_test_mlr_gen = table(pred, data_test$gender)
+tab_test_glm_gen = table(pred_glm_compl, data_test$gender)
+precision_glm_gen = round(precision(tab_test_glm_gen),2)
+recall_glm_gen = round(recall(tab_test_glm_gen),2)
 
-precision_mlr_gen = round(precision(tab_test_mlr_gen),2)
-recall_mlr_gen = round(recall(tab_test_mlr_gen),2)
+plot_stats(tab_test_glm_gen, mode="test", cf = T)
+```
 
-plot_stats(tab_test_mlr_gen, cf = T)
+```{r}
+summary(glm_model_gender)
 ```
 
 ```{r}
@@ -1320,40 +1357,41 @@ plot_stats(tab_test_mda_gen, cf = T)
 ```
 
 ```{r}
-################### RDA ################################
+################### FDA ################################
 
 # Fit the model
-rda_model = rda(gender~., data = data_train)
+fda_model = fda(gender~., data = data_train)
 
-pred = predict(rda_model, newdata = data_train)
-tab_train = table(pred$class, data_train$gender) 
+pred = predict(fda_model, newdata = data_train)
+tab_train = table(pred, data_train$gender) 
 
 plot_stats(tab_train, mode="train", cf = F)
 
 ## TEST SET
-pred = predict(rda_model, newdata = data_test)
-tab_test_rda_gen = table(pred$class, data_test$gender)
+pred = predict(fda_model, newdata = data_test)
+tab_test_fda_gen = table(pred, data_test$gender)
 
-precision_rda_gen = round(precision(tab_test_rda_gen),2)
-recall_rda_gen = round(recall(tab_test_rda_gen),2)
+precision_fda_gen = round(precision(tab_test_fda_gen),2)
+recall_fda_gen = round(recall(tab_test_fda_gen),2)
 
-plot_stats(tab_test_rda_gen, cf = T)
+plot_stats(tab_test_fda_gen, cf = T)
 ```
 
+**Gender prediction results** As previously done with age groups, here we present the results obtained by each model, considering both the accuracy and the precision/recall.
 
 ```{r}
 ########### SUMMARY TAB AGE MODELS ###########################
 
-#vec_name_model = c("MLR", "KNN", "RF", "LDA", "MDA", "QDA")
-vec_name_model = c("MLR", "RF", "LDA", "MDA", "QDA", "RDA")
+#vec_name_model = c("GLM", "KNN", "RF", "LDA", "MDA", "QDA")
+vec_name_model = c("GLM", "RF", "LDA", "MDA", "QDA", "FDA")
 
-vec_acc_model_gen = c((round(accuracy(tab_test_mlr_gen),2)),
+vec_acc_model_gen = c((round(accuracy(tab_test_glm_gen),2)),
                       #(round(accuracy(tab_test_knn),2)),
                       (round(accuracy(tab_test_rf_gen),2)),
                       (round(accuracy(tab_test_lda_gen),2)),
                       (round(accuracy(tab_test_mda_gen),2)),
                       (round(accuracy(tab_test_qda_gen),2)),
-                      (round(accuracy(tab_test_rda_gen),2)))
+                      (round(accuracy(tab_test_fda_gen),2)))
 
 
 tab_accuracy_models = data.frame(vec_name_model, vec_acc_model_gen)
@@ -1366,23 +1404,25 @@ barplot_acc_model = barplot(tab_accuracy_models$vec_acc_model_gen,
                              names.arg = tab_accuracy_models$vec_name_model)
 
 ```
+
+Excluding the good result obtained by the random forest, we would have expected a little higher values from the other models, considering the fact that we moved from a multiclass classification problem (4 classes in age groups) to a binomial one (gender m/f).
+
 ```{r}
-precision_gen = cbind(data.frame(precision_mlr_gen), 
+
+precision_gen= cbind(data.frame(precision_glm_gen), 
                       data.frame(precision_rf_gen),
                       data.frame(precision_lda_gen),
                       data.frame(precision_mda_gen),
                       data.frame(precision_qda_gen),
-                      data.frame(precision_rda_gen))
+                      data.frame(precision_fda_gen))
 
-recall_gen = cbind(data.frame(recall_mlr_gen), 
+recall_gen = cbind(data.frame(recall_glm_gen), 
                   data.frame(recall_rf_gen),
                   data.frame(recall_lda_gen),
                   data.frame(recall_mda_gen),
                   data.frame(recall_qda_gen),
-                  data.frame(recall_rda_gen))
-```
+                  data.frame(recall_fda_gen))
 
-```{r}
 par(mfrow=c(1,2))
 
 barplot_prec_model = barplot(as.matrix(precision_gen), 
@@ -1408,11 +1448,7 @@ barplot_rec_model = barplot(as.matrix(recall_gen),
 
 legend("topright", c("Male", "Female"),
        fill = heat.colors(2), cex = 0.8)
-
 ```
-
-
-
 
 # \############################### MAPS
 
@@ -1520,7 +1556,6 @@ pos_19 = cbind(map_start,
 write.csv(pos_19, paste(getwd(), "SL_dataset/2019_pos.csv", sep = "/"), row.names = FALSE)
 ```
 
-
 ```{r}
 ## ------------------------ TOP 10 TRIP BY AGE ----------------------------- ##
 data_top = data_u85[data_u85$start.station.name %in% start_tab$start_name,]
@@ -1597,8 +1632,6 @@ for i in range(1,5):
   map_hooray.save("test_" + str(i) + ".html")
 
 ```
-
-
 
 ```{python}
 import pandas as pd
