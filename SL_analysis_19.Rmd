@@ -590,7 +590,39 @@ dates <- weekdays(as.Date(dates))
 data_o85$dayname = dates
 
 tab = table(data_u85$dayname)
-barplot(tab)
+d = as.data.frame((tab))
+tmp = d
+d[1,] = tmp[3,]
+d[2,] = tmp[4,]
+d[3,] = tmp[5,]
+d[4,] = tmp[2,]
+d[5,] = tmp[7,]
+d[7,] = tmp[1,]
+tmp
+barplot(d$Freq,
+        names.arg = d$Var1,
+        col = 'lightblue')
+```
+```{r}
+d
+tab = table(data_u85$age_groups,data_u85$dayname)
+tmp = tab
+tmp
+tab[,1] = tmp[,3]
+tab[,2] = tmp[,4]
+tab[,3] = tmp[,5]
+tab[,4] = tmp[,2]
+tab[,5] = tmp[,7]
+tab[,7] = tmp[,1]
+tab
+
+barplot(tab,
+        names.arg = d$Var1,
+        beside=FALSE,
+        col = viridis(4))
+
+legend("topright", c("1", "2", "3", "4"),
+       fill = viridis(4), cex = 0.7)
 ```
 
 **Feature selection**
