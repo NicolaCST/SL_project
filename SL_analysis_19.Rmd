@@ -13,16 +13,16 @@ knitr::opts_chunk$set(echo = TRUE)
 
 **Project Introduction**
 
-*BlueBikes* [] is a public bike sharing system born in July 2011 in Boston. It has grown exponentially over the years:
+*BlueBikes* is a public bike sharing system born in July 2011 in Boston. It has grown exponentially over the years:
 
 -   From 3,203 annual members in 2011 to 21,261 in 2019
 -   From 610 bicycles in 2011 to 3,500+ in 2019
 
 The system is simple: a user can pick up a bike at any station dock, ride it for a specific amount of time, and then return it to any station for re-docking. Users can also choose to subscribe to the service via an annual (or monthly) plan. However, despite the constant growth of the system, the year 2020 was unlike any before, and like most things, bike share changed radically.
 
-With this project we want to analyze the impact of the COVID pandemic on the habits of BlueBike's users. Moreover, the dataset of the year 2020 had many missing values (Gender: 79% missing, BirthYear: 79% missing)
-
 **Project structure**
+
+With this project we want to analyze the impact of the COVID pandemic on the habits of BlueBike's users. Moreover, considering the fact that the dataset of the year 2020 contains many missing values (Gender: 79% missing, BirthYear: 79% missing), we will also try to predict these missing values via some machine learning models.
 
 The aim of the project is twofold, thus it is organized as follow:
 
@@ -36,7 +36,7 @@ The aim of the project is twofold, thus it is organized as follow:
 
 **Dataset analysis**
 
-For this project we used two datasets, both available for free on Kaggle []:
+For this project we used two datasets, both available for free on Kaggle:
 
 -   2019 BlueBikes tripdata: 2.52 million of trips, described with 16 attributes
 
@@ -61,11 +61,11 @@ For this project we used two datasets, both available for free on Kaggle []:
 | Month                   | Integer   | Month of when the trip took place                     |
 | Gender                  | Integer   | Gender of the user. 0 = Unknown, 1 = Male, 2 = Female |
 
-As mentioned above, the year 2020 had another attribute: *"PostalCode".* In order to be consistent with the analysis, we removed this field to match the same structure of the past year. Moreover, the trips of December 2020 were missing, thus, we downloaded the report of December2020 from the BlueBikes webpage [], and added the missing values.
+As mentioned above, the year 2020 had another attribute: *"PostalCode".* In order to be consistent with the analysis, we removed this field to match the same structure of the past year. Moreover, the trips of December 2020 were missing, thus, we downloaded the report of December2020 from the BlueBikes website, and added the missing values.
 
 **Preprocessing**
 
-In order to perform a solid anaylisis, we've arranged an initial data analysis phase. Here we present some of the choices derived from this exploration:
+In order to perform a solid analysis, we've arranged an initial data preprocessing phase. Here we present some of the choices derived from this exploration:
 
 -   Rather than seconds, we decided to use minutes
 
@@ -542,13 +542,13 @@ res = rcorr(as.matrix(data_train))
 ```
 
 ```{r}
-
-a = as.data.frame(flattenCorrMatrix(res$r, res$P))
-
-corrplot(cor(data_train),
+corrplot(res$r,
          type = "upper",
          order = "hclust", 
          tl.col = "black",
+         p.mat = res$P,
+         sig.level = 0.01,
+         insig = "blank",
          tl.cex = 0.8,
          number.cex = 0.6,
          diag = FALSE,
@@ -561,13 +561,7 @@ corrplot(cor(data_train),
 corr_1<- ggplot(data_train, aes(startday, stopday)) + geom_jitter(color = "blue") + xlab("startday") + ylab("stopday")
 corr_2<- ggplot(data_train, aes(starttime, stoptime)) + geom_jitter(color = "blue") + xlab("starttime") + ylab("stoptime")
 
-#Neg Cor
-corr_3<- ggplot(data_train, aes(age_groups, gender)) + geom_jitter(color = "orange") + xlab("age_group") + ylab("gender")
-corr_4<- ggplot(data_train, aes(age_groups, usertype)) + geom_jitter(color = "orange") + xlab("age_group") + ylab("usertype")
-
-
 grid.arrange(corr_1, corr_2, ncol = 2)
-grid.arrange(corr_3, corr_4, ncol = 2)
 ```
 
 ```{r}
@@ -593,7 +587,7 @@ tab = table(data_u85$dayname)
 barplot(tab)
 ```
 
-**Feature selection**
+### **Feature selection**
 
 Feature selection is the process of reducing the number of input variables when developing a predictive model. This is really convenient when dealing with data science problems, which tipically consist of thousands of entries and several features. It is desirable to reduce the number of input variables to both reduce the computational cost of modeling and, in some cases, to improve the performance of the model. The stepwise selection consists of iteratively adding and removing predictors, in the predictive model, in order to find the subset of variables in the data set resulting in the best performing model, that is a model that lowers prediction error.
 
@@ -667,7 +661,7 @@ We tested several models, at the end of this section we will show the results am
 -   Random Forest
 -   Discriminant Analysis
 
-## Multinomial Logistic Regression
+### Multinomial Logistic Regression
 
 The multinomial logistic regression is an extension of the logistic regression for multiclass classification tasks
 
@@ -696,8 +690,11 @@ recall_mlr_age = round(recall(tab_test_mlr_age),2)
 
 plot_stats(tab_test_mlr_age, cf = T)
 
-cool_cf(pred, data_test$age_groups)
 ```
+
+### KNN
+
+The K - nearest neighbors algorithm is a simple non-parametric *machine learning* method used for classification (but can be used also for regression). This algo predicts the outcome of a new observation based on the distance of k similar cases
 
 ```{r}
 ####################### KNN ################################
@@ -720,26 +717,9 @@ tab_test_knn = table(knn_model_pred, labels_test)
 plot_stats(tab_test_knn, cf = T)
 ```
 
-```{r}
-percs = get_perc(mode = "50k")
+### Random Forest
 
-one = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
-data_train = as.data.frame(one[[1]])
-data_test = as.data.frame(one[[2]])
-
-data_agg = setdiff(data_u85, as.data.frame(one[1]))
-two = get_balanced_v2(data_agg, percs[[1]], percs[[2]])
-data_train = as.data.frame(two[[1]])
-data_test = as.data.frame(two[[2]])
-
-data_agg = setdiff(data_agg, as.data.frame(two[1]))
-three = get_balanced_v2(data_agg, percs[[1]], percs[[2]])
-data_train = as.data.frame(three[[1]])
-data_test = as.data.frame(three[[2]])
-
-
-data_test_diff = setdiff(data_agg, as.data.frame(three[1]))
-```
+The Random forest classifier is basically a set of decision trees (DT). This algo establishes the outcome based on the predictions of the decision trees. It predicts by taking the average or mean of the output from various trees.
 
 ```{r}
 ################### RANDOM FOREST ##########################
@@ -788,27 +768,11 @@ plot.roc(rs[[1]])
 sapply(2:length(rs),function(i) lines.roc(rs[[i]],col=i))
 ```
 
-```{r}
-data_train$age_groups = labels_train
-data_test$age_groups = labels_test
-
-data_u85 = subset(data_u85, select=-c(gender,startday, stopday, bikeid))
-
-new = setdiff(data_u85, data_train)
-new = setdiff(new, data_test)
-labels_new = new$age_groups
-
-pred = predict(rf_model, newdata = subset(new, select = -c(age_groups)))
-tab = table(pred, labels_new)
-plot_stats(tab, cf = T)
-```
-
-
 ## Discriminant Analysis
 
-Discriminant analysis is used to predict the probability of belonging to a given class (or category) based on one or multiple predictor variables. It works with continuous and/or categorical predictor variables. Although both logistic regression and discriminant analysis can be used for binary classification tasks, the latter is more stable than the first one for multi-class classification problems. There are many methods for this analysis, in this project we focused on:
+Discriminant analysis is used to predict the probability of belonging to a given class (or category) based on one or multiple predictor variables. Although both logistic regression and discriminant analysis can be used for binary classification tasks, the latter is more stable than the first one for multi-class classification problems. There are many methods for this analysis, in this project we focused on:
 
--   Linear discriminant analysis (LDA): Uses linear combinations of predictors to predict the class of a given observation. Assumes that the predictor variables (p) are normally distributed and the classes have identical variances or identical covariance matrices.
+-   Linear discriminant analysis (LDA): Uses linear combinations of predictors to predict the class of a given observation.
 
 -   Mixture discriminant analysis (MDA): Each class is assumed to be a Gaussian mixture of subclasses.
 
@@ -920,7 +884,6 @@ barplot_acc_model = barplot(tab_accuracy_models$vec_acc_model,
 
 ```
 
-
 ```{r}
 precision_age= cbind(data.frame(precision_mlr_age), 
                       data.frame(precision_rf_age),
@@ -936,7 +899,7 @@ recall_age = cbind(data.frame(recall_mlr_age),
                   data.frame(recall_qda_age),
                   data.frame(recall_fda_age))
 
-par(mfrow=c(1,2))
+par(mfrow=c(1, 2))
 
 barplot_prec_model_age = barplot(as.matrix(precision_age), 
                           beside = T,
@@ -962,7 +925,8 @@ barplot_rec_model_age = barplot(as.matrix(recall_age),
 legend("topright", c("1", "2", "3", "4"),
        fill = heat.colors(4), cex = 0.8)
 ```
-It is possible to see that the Random Forest is the most suitable model for our task. However, we could improve the performance of our model via a majority voting ensemble, i.e. a model that combines the predictions from multiple other models.
+
+It is possible to see that the Random Forest is the most suitable model for our task. It provides both a quite good accuracy (compared with the other models), together with the highest values of precision and recall. However, we could try to improve the performance of this model via a majority voting ensemble, i.e. a model that combines the predictions from multiple other models.
 
 ### Majority-voting ensemble random forest
 
@@ -1452,6 +1416,10 @@ legend("topright", c("Male", "Female"),
 
 # \############################### MAPS
 
+As mentioned in the introduction, the year 2020 brought changes that no one would have expected. This caused significant changes even in the habits of all of us. To compare some of the differences between the pre-pandemic and the post-pandemic users, we will we will dive into a deep exploration of the data related to the BlueBikes stations: their locations, the most used and also the most common path divided by age groups. In order to being able to visualize these informations in the most suitable way, we will use a combination of R and some scripts in Python: thanks to the Folium library we will be able to generate Boston's maps, pointing out all the points of interest, along with user's favorite paths.
+
+Here we first generate the tables with the most used stations, both sart and end ones.
+
 ```{r}
 data_u85 = tripdata_2019_r[tripdata_2019_r$age <= 85,]
 data_u85$age_groups = cut(data_u85$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
@@ -1482,9 +1450,7 @@ for (rowIdx in 1:(nrow(start_tab))) {
     start_tab[rowIdx, colIdx] = nrow(subset(EDA_id_station, age_groups == colIdx & start.station.name == top_10_start[rowIdx,1]))
   }
 }
-
 start_tab$start_name = top_10_start$start_name
-
 
 
 # TOP 10 END #
@@ -1502,7 +1468,14 @@ for (rowIdx in 1:(nrow(end_tab))) {
 }
 
 end_tab$end_name = top_10_end$end_name
+```
 
+```{r}
+head(start_tab)
+```
+
+```{r}
+head(end_tab)
 ```
 
 ```{r}
@@ -1533,6 +1506,8 @@ legend("topright", legend = end_tab$end_name,
 
 ```
 
+We now save this informations in a .csv file in order to use it in the Python script
+
 ```{r}
 map_start = subset(data_u85, select = c(start.station.name,
                                   start.station.latitude, 
@@ -1555,6 +1530,8 @@ pos_19 = cbind(map_start,
 
 write.csv(pos_19, paste(getwd(), "SL_dataset/2019_pos.csv", sep = "/"), row.names = FALSE)
 ```
+
+The most common path divided by age groups
 
 ```{r}
 ## ------------------------ TOP 10 TRIP BY AGE ----------------------------- ##
@@ -1583,6 +1560,8 @@ for (i in 2:4){
 
 write.csv(out, paste(getwd(), "SL_dataset/trips_age_19.csv", sep = "/"), row.names = FALSE)
 ```
+
+### Map creation via Python script
 
 ```{python}
 import pandas as pd
@@ -1630,7 +1609,6 @@ for i in range(1,5):
 
   map_hooray.add_child(feature_group)
   map_hooray.save("test_" + str(i) + ".html")
-
 ```
 
 ```{python}
@@ -1713,7 +1691,6 @@ write.csv(temp, paste(getwd(), "SL_dataset/start_station_by_age_19.csv", sep = "
 ```
 
 ```{python}
-
 df_acc = pd.read_csv('C:/Users/Utente/Desktop/SL_project/SL_dataset/start_station_by_age_19.csv', dtype=object)
 
 df_acc['start.station.name'] = df_acc['start.station.name'].astype(str)
@@ -1741,5 +1718,4 @@ for i in range(1,5):
   
   map_hooray.add_child(feature_group)
   map_hooray.save("BostonMap_age" + str(i) + ".html")
-
 ```
