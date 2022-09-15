@@ -43,7 +43,7 @@ For this project we used two datasets, both available for free on Kaggle:
 -   2020 BlueBikes tripdata: 2 million of trips, described with 17 attributes
 
 | Attribute name          | Type      | Description                                     |
-|:------------------|------------|-----------------------------------------|
+|:----------------|-----------------|--------------------------------------|
 | Tripduration            | Integer   | Duration of the trip in seconds                 |
 | Starttime               | Integer   | Start time and date of trip                     |
 | Stoptime                | Integer   | Stop time and date of trip                      |
@@ -2069,6 +2069,7 @@ for i in range(1,5):
 ```
 
 ## Map visualization
+
 Now we are able to visualize all the information obtained in the section "Maps". The analysis of these results, however, requires at least a minimum knowledge of the main districts of Boston in order to make some assumptions and/or predictions:
 
 -   *Charlestown*, *North End*: oldest residential neighborhood, filled with old buildings dating from 100 or more years ago, sleek condos, stunning waterfront views, plus several wonderful hotels.
@@ -2168,14 +2169,13 @@ save(predict_age_20, file = "predict_age_20.RData")
 load("predict_age_20.RData")
 new = data_o85_20
 new$age_groups = predict_age_20$fin
-data_2020 = rbind(data_u85_20, new)
+data_2020 = rbind(subset(data_u85_20, select= -c(start.station.name, end.station.name)), new)
 ```
-
 
 ## Gender prediction
 
 ```{r}
-rf_model_gender = readRDS("models/rf_for_gender.rda")
+rf_model_gender = readRDS("rf_for_gender.rda")
 
 data_no_gender = data_2020[data_2020$gender == 0,]
 data_gender = data_2020[data_2020$gender != 0,]
@@ -2184,12 +2184,9 @@ y_gender = predict(rf_model_gender, newdata = subset(data_no_gender, select = -c
 data_no_gender$gender = y_gender
 
 data_2020 = rbind(data_gender, data_no_gender)
+
+
 ```
-
-
-
-
-
 
 ## Comparison 2019 2020
 
@@ -2222,7 +2219,6 @@ legend("topright",
                   "Group 4: 65-85"),
        fill = viridis(4))
 ```
-
 
 ```{r}
 par(mfrow=c(1,2))
@@ -2265,7 +2261,7 @@ legend("topleft", legend = c("1", "2", "3", "4"),
        cex = 0.8)
 
 
-freq_age_month = barplot(table(data_2020$age_groups, data$month),
+freq_age_month = barplot(table(data_2020$age_groups, data_2020$month),
                          names.arg = months_list,
                          col = viridis(4),
                          main='Frequency during months 2020')
@@ -2342,7 +2338,7 @@ legend("topleft", legend = c("Unknown", "Male", "Female"),
 
 text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
-tab = table(data_2020$gender, data$usertype)
+tab = table(data_2020$gender, data_2020$usertype)
 hist = barplot(tab, 
         beside = TRUE, 
         legend = FALSE,
@@ -2470,34 +2466,39 @@ barplot(t,
         args.legend = list(legend=(c('Subscriber', 'Customer'))))
 ```
 
+```{r}
+par(mfrow=c(1,2))
 
+tab = table(tripdata_2019_r$gender, tripdata_2019_r$usertype)
+hist = barplot(tab, 
+        beside = TRUE, 
+        legend = FALSE,
+        main = "Gender and UserType",
+        xlab = "UserType",
+        ylab = "Freq",
+        ylim=c(0, max(tab) + 100000),
+        names.arg = c("Customer: 0", "Subscriber: 1"),
+        col = viridis(3))
 
+legend("topleft", legend = c("Unknown", "Male", "Female"),
+       fill = viridis(3))
 
+text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
+tab = table(data_2020$gender, tripdata_2020_r$usertype)
+hist = barplot(tab, 
+        beside = TRUE, 
+        legend = FALSE,
+        main = "Gender and UserType",
+        xlab = "UserType",
+        ylab = "Freq",
+        ylim=c(0, max(tab) + 100000),
+        names.arg = c("Customer: 0", "Subscriber: 1"),
+        col = viridis(2))
 
+legend("topleft", legend = c( "Male", "Female"),
+       fill = viridis(2))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+text(x = hist, y = tab + 50000, labels = tab, cex = .8)
+```
 
