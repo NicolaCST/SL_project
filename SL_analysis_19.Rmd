@@ -42,24 +42,24 @@ For this project we used two datasets, both available for free on Kaggle:
 
 -   2020 BlueBikes tripdata: 2 million of trips, described with 17 attributes
 
-| Attribute name          | Type      | Description                                           |
-|:------------------|-------------------|----------------------------------|
-| Tripduration            | Integer   | Duration of the trip in seconds                       |
-| Starttime               | Integer   | Start time and date of trip                           |
-| Stoptime                | Integer   | Stop time and date of trip                            |
-| Start_station_id        | Integer   | Unique ID of station - start                          |
-| Start_station_name      | Character | Name of the station the trip started at               |
-| Start_station_latitude  | Numeric   | Latitude of start station of trip                     |
-| Start_station_longitude | Numeric   | Longitude of start station of trip                    |
-| End_station_id          | Integer   | Unique ID of station - end                            |
-| End_station_name        | Character | Name of the station the trip ended at                 |
-| End_station_latitude    | Numeric   | Latitude of end station of trip                       |
-| End_station_longitude   | Numeric   | Longitude of end station of trip                      |
-| BikeID                  | Integer   | Unique ID of bike used for trip                       |
-| UserType                | Character | Type of user: "Customer" or "Subscriber"              |
-| Year                    | Integer   | Year of when the trip took place                      |
-| Month                   | Integer   | Month of when the trip took place                     |
-| Gender                  | Integer   | Gender of the user. 0 = Unknown, 1 = Male, 2 = Female |
+| Attribute name          | Type      | Description                                     |
+|:------------------|------------|-----------------------------------------|
+| Tripduration            | Integer   | Duration of the trip in seconds                 |
+| Starttime               | Integer   | Start time and date of trip                     |
+| Stoptime                | Integer   | Stop time and date of trip                      |
+| Start_station_id        | Integer   | Unique ID of station - start                    |
+| Start_station_name      | Character | Name of the station the trip started at         |
+| Start_station_latitude  | Numeric   | Latitude of start station of trip               |
+| Start_station_longitude | Numeric   | Longitude of start station of trip              |
+| End_station_id          | Integer   | Unique ID of station - end                      |
+| End_station_name        | Character | Name of the station the trip ended at           |
+| End_station_latitude    | Numeric   | Latitude of end station of trip                 |
+| End_station_longitude   | Numeric   | Longitude of end station of trip                |
+| BikeID                  | Integer   | Unique ID of bike used for trip                 |
+| UserType                | Character | Type of user: "Customer" or "Subscriber"        |
+| Year                    | Integer   | Year of when the trip took place                |
+| Month                   | Integer   | Month of when the trip took place               |
+| Gender                  | Integer   | Gender of the user: 0=Unknown, 1=Male, 2=Female |
 
 As mentioned above, the year 2020 had another attribute: *"PostalCode".* In order to be consistent with the analysis, we removed this field to match the same structure of the past year. Moreover, the trips of December 2020 were missing, thus, we downloaded the report of December2020 from the BlueBikes website, and added the missing values.
 
@@ -120,6 +120,7 @@ library(caret)
 library(tidyverse)
 library(MASS)
 library(e1071)
+library(viridis)
 library(kableExtra)
 
 set.seed(42)
@@ -211,6 +212,16 @@ get_balanced_v2 <- function(data, perc_m, perc_f){
 }
 
 
+ty <- function(num, pred){
+
+  if(length(num) != 1){
+    return(pred)
+  }else{
+    return(num)
+  }
+}
+
+
 
 add_smote_sample <- function(data, age, gen, k_neig=20, times){
   
@@ -229,6 +240,105 @@ add_smote_sample <- function(data, age, gen, k_neig=20, times){
   return(data)
   
 }
+
+ensemble_predict <- function(data_use){
+  
+  # --------------- LOAD TRAINED MODELS -------------- #
+  rf_100 = readRDS(load_dataset("models","rf_best.rda"))
+  rf_50 = readRDS(load_dataset("models", "rf_best_g_50.rda"))
+  rf_10 = readRDS(load_dataset("models", "rf_best_g_10.rda"))
+  # ------------------------------------------------- #
+    
+  pred_1 = predict(rf_100, newdata = data_use)
+  pred_2 = predict(rf_50, newdata = data_use)
+  pred_3 = predict(rf_10, newdata = data_use)
+  
+  a = as.data.frame(pred_1)
+  colnames(a) = c("pred_a")
+  a$pred_a = as.numeric(a$pred_a)
+  
+  b = as.data.frame(pred_2)
+  colnames(b) = c("pred_b")
+  b$pred_b = as.numeric(b$pred_b)
+  
+  c = as.data.frame(pred_3)
+  colnames(c) = c("pred_c")
+  c$pred_c = as.numeric(c$pred_c)
+  
+  a$pred_b = (b$pred_b)
+  a$pred_c = (c$pred_c)
+  a$pred_a = (a$pred_a)
+  rm(b,c)
+  
+  pred_1a = (a$pred_a)
+  pred_2a = (a$pred_b)
+  pred_3a = (a$pred_c)
+  
+  df_prob_1 = as.data.frame(predict(rf_100, 
+                                    newdata = data_use, type='prob'))
+  
+  df_prob_2 = as.data.frame(predict(rf_50, 
+                                    newdata = data_use, type='prob'))
+  
+  df_prob_3 = as.data.frame(predict(rf_10, 
+                                    newdata = data_use, type='prob'))
+  
+  final = vector(mode="list", length = length(pred_1a))
+  w_class = c(0.48, 0.72, 0.79, 0.98)
+  c = 0
+  
+
+  for (i in (1:length(final))){
+    
+    if(pred_1a[i] == pred_2a[i] | 
+       pred_1a[i] == pred_3a[i] | 
+       pred_3a[i] == pred_2a[i])
+      {
+        final[i] = pred_1a[i]
+    }else{
+      prob_pred_1 = df_prob_1[i,]
+      prob_pred_2 = df_prob_2[i,]
+      prob_pred_3 = df_prob_3[i,]
+  
+      m1 = max(prob_pred_1)
+      m2 = max(prob_pred_2)
+      m3 = max(prob_pred_3)
+  
+      pos1 = which(prob_pred_1 == m1)
+      pos2 = which(prob_pred_2 == m2)
+      pos3 = which(prob_pred_3 == m3)
+      
+      pos1 = ty(pos1, pred_1a[i])
+      pos2 = ty(pos2, pred_2a[i])
+      pos3 = ty(pos3, pred_3a[i])
+  
+      val1 = (as.numeric(w_class[pos1]) * m1)
+      val2 = (as.numeric(w_class[pos2]) * m2)
+      val3 = (as.numeric(w_class[pos3]) * m3)
+      
+      fin = max(val1, val2, val3)
+      if(fin == val1){
+        pos = pos1
+      }
+  
+      if(fin == val2){
+        pos = pos2
+      }
+      
+      if(fin == val3){
+        pos = pos3
+      }
+      final[i] = 1
+      c = c+1
+    }
+  }
+  
+  a$fin = as.numeric(final)
+  
+  return(a) 
+    
+}
+
 
 
 
@@ -323,10 +433,138 @@ cool_cf <- function(pred, true){
   
 }
 
-
 ```
 
-**Data Load**
+#### 2019 Dataset preparation
+
+```{r}
+################################## 2019 ###########################################
+tripdata_2019_r = read.csv(
+  load_dataset("SL_dataset", "bluebikes_tripdata_2019.csv"))
+
+colnames(tripdata_2019_r)
+rm(tripdata_2019)
+
+# Control the number of trip longer than 1H and shorter than 1m
+nrow(tripdata_2019_r[tripdata_2019_r$tripduration>3600,])
+nrow(tripdata_2019_r[tripdata_2019_r$tripduration<60,])
+
+# Split timestamp in date - time Then split date in y/m/d
+tripdata_2019_r = tidyr::separate(tripdata_2019_r, starttime,
+                                  c("startdate", "starttime"), sep = " ")
+tripdata_2019_r = tidyr::separate(tripdata_2019_r, startdate, 
+                                  c("syear", "startmonth", "startday"), sep = "-")
+tripdata_2019_r = tidyr::separate(tripdata_2019_r, stoptime,
+                                  c("stopdate", "stoptime"), sep = " ")
+tripdata_2019_r = tidyr::separate(tripdata_2019_r, stopdate,
+                                  c("stopyear", "stopmonth", "stopday"), sep = "-")
+
+# Remove redundant informations
+tripdata_2019_r = subset(tripdata_2019_r, select = -c(syear, stopyear))
+
+
+#removed all the trips that started in a month and finished in the next one
+between_month = 
+  nrow(tripdata_2019_r[tripdata_2019_r$startmonth != tripdata_2019_r$stopmonth,])
+
+ratio = round(
+  (as.integer(between_month) / as.integer(nrow(tripdata_2019_r))) * 100, 3)
+
+tripdata_2019_r = subset(tripdata_2019_r, select = -c(stopmonth, startmonth))
+
+
+# Convert time to sec [starting from midnight]
+tripdata_2019_r$starttime = hms(tripdata_2019_r$starttime)
+tripdata_2019_r$starttime = as.numeric(tripdata_2019_r$starttime)
+tripdata_2019_r$starttime = round(tripdata_2019_r$starttime,0)
+
+tripdata_2019_r$stoptime = hms(tripdata_2019_r$stoptime)
+tripdata_2019_r$stoptime = as.numeric(tripdata_2019_r$stoptime)
+tripdata_2019_r$stoptime = round(tripdata_2019_r$stoptime,0)
+
+# Age field creation
+tripdata_2019_r$age = tripdata_2019_r$year - tripdata_2019_r$birth.year
+
+# Removed NUll Island
+tripdata_2019_r = tripdata_2019_r[tripdata_2019_r$start.station.latitude > 1 &                                       tripdata_2019_r$end.station.latitude >1,]
+
+
+#Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
+tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Subscriber"] = 1
+tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Customer"] = 0
+
+
+write.csv(tripdata_2019_r,
+          "C:/Users/Utente/Desktop/SL_project/tripdata_2019_r.csv", 
+          row.names = FALSE)
+```
+
+#### 2020 Dataset preparation
+
+Repeat the same exact procedure used in the 2019
+
+```{r}
+
+tripdata_2020_r = read.csv(
+  load_dataset("SL_dataset", "bluebikes_tripdata_2020.csv"))
+
+
+tripdata_2020_r = subset(tripdata_2020_r, select = -c(postal.code))
+colnames(tripdata_2020_r)
+
+# Control the number of trip longer than 1H and shorter than 1m
+nrow(tripdata_2020_r[tripdata_2020_r$tripduration>3600,])
+nrow(tripdata_2020_r[tripdata_2020_r$tripduration<60,])
+
+# Split timestamp in date - time Then split date in y/m/d
+tripdata_2020_r = tidyr::separate(tripdata_2020_r, starttime, 
+                                  c("startdate", "starttime"), sep = " ")
+tripdata_2020_r = tidyr::separate(tripdata_2020_r, startdate,
+                                  c("syear", "startmonth", "startday"), sep = "-")
+tripdata_2020_r = tidyr::separate(tripdata_2020_r, stoptime, 
+                                  c("stopdate", "stoptime"), sep = " ")
+tripdata_2020_r = tidyr::separate(tripdata_2020_r, stopdate, 
+                                  c("stopyear", "stopmonth", "stopday"), sep = "-")
+
+# Remove redundant informations
+tripdata_2020_r = subset(tripdata_2020_r, select = -c(syear, stopyear))
+
+between_month = nrow(
+  tripdata_2020_r[tripdata_2020_r$startmonth != tripdata_2020_r$stopmonth,])
+
+ratio = round(
+  (as.integer(between_month) / as.integer(nrow(tripdata_2020_r))) * 100, 3)
+
+tripdata_2020_r = subset(tripdata_2020_r, select = -c(stopmonth, startmonth))
+
+# Convert time to sec [starting from midnight]
+tripdata_2020_r$starttime = hms(tripdata_2020_r$starttime)
+tripdata_2020_r$starttime = as.numeric(tripdata_2020_r$starttime)
+tripdata_2020_r$starttime = round(tripdata_2020_r$starttime,0)
+
+tripdata_2020_r$stoptime = hms(tripdata_2020_r$stoptime)
+tripdata_2020_r$stoptime = as.numeric(tripdata_2020_r$stoptime)
+tripdata_2020_r$stoptime = round(tripdata_2020_r$stoptime,0)
+
+#Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
+tripdata_2020_r$gender[is.na(tripdata_2020_r$gender)] = 0
+tripdata_2020_r$birth.year[is.na(tripdata_2020_r$birth.year)] = 0
+
+tripdata_2020_r$age = tripdata_2020_r$year - tripdata_2020_r$birth.year
+tripdata_2020_r$age[tripdata_2020_r$age == 2020] = 0
+tripdata_2020_r = tripdata_2020_r[tripdata_2020_r$start.station.latitude > 1 & tripdata_2020_r$end.station.latitude >1,]
+
+tripdata_2020_r$usertype[tripdata_2020_r$usertype == "Subscriber"] = 1
+tripdata_2020_r$usertype[tripdata_2020_r$usertype == "Customer"] = 0
+
+write.csv(
+  tripdata_2020_r, "C:/Users/Utente/Desktop/SL_project/tripdata_2020_r.csv", 
+  row.names = FALSE)
+```
+
+# 2019
+
+### **Data Load**
 
 Here we load and shuffle the dataset for the 2019
 
@@ -335,7 +573,11 @@ tripdata_2019_r = read.csv(load_dataset("SL_dataset", "tripdata_2019_r.csv"))
 tripdata_2019_r = tripdata_2019_r[sample(1:nrow(tripdata_2019_r)),]
 ```
 
-**EDA on 2019**
+```{r}
+summary(tripdata_2019_r)
+```
+
+### **EDA on 2019**
 
 As mentioned in the Preprocessing section, it is possible to see some outliers in the age field (probably mainly caused by the users during the registration to the system)
 
@@ -383,19 +625,26 @@ In this section we're going to split the ages of the users in 4 groups, as menti
 split_ages = c(16, 30, 45, 65, 85)
 
 data_u85 = tripdata_2019_r[tripdata_2019_r$age <= 85,]
-data_u85$age_groups = cut(data_u85$age, breaks=split_ages, include.lowest = TRUE, labels = FALSE)
+data_u85$age_groups = cut(data_u85$age, breaks=split_ages, 
+                          include.lowest = TRUE, labels = FALSE)
 
 data_o85 = tripdata_2019_r[tripdata_2019_r$age > 85,]
 data_o85$age_groups = 0
 
-data_u85 = subset(data_u85, select = -c(age, birth.year, year))
-data_o85 = subset(data_o85, select = -c(age, birth.year, year))
+data_u85 = subset(data_u85, 
+                  select = -c(age, birth.year, year, 
+                              start.station.name, end.station.name))
+
+data_o85 = subset(data_o85, 
+                  select = -c(age, birth.year, year, 
+                              start.station.name, end.station.name))
 
 data_u85$tripduration = round(data_u85$tripduration/60,2)
 data_u85$starttime = round(data_u85$starttime/60,2)
 data_u85$stoptime = round(data_u85$stoptime/60,2)
 
-data_u85[c("starttime", "stoptime")] = lapply(data_u85[c("starttime", "stoptime")], nor)
+data_u85[c("starttime", "stoptime")] = lapply(data_u85[c("starttime", "stoptime")],
+                                            nor)
 ```
 
 ```{r}
@@ -491,7 +740,10 @@ lines(c4, col = our_palette[4], lwd = 2)
 
 
 legend("topleft", 
-       legend = c("Group 1: 16-30", "Group 2: 31-45", "Group 3: 46-65", "Group 4: 65-85"),
+       legend = c("Group 1: 16-30",
+                  "Group 2: 31-45", 
+                  "Group 3: 46-65", 
+                  "Group 4: 65-85"),
        fill = our_palette)
 ```
 
@@ -565,7 +817,7 @@ full = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
 data_train = as.data.frame(full[1])
 data_test = as.data.frame(full[2])
 
-res = rcorr(as.matrix(data_train))
+res = rcorr(as.matrix(data_train[,-16]))
 ```
 
 ```{r}
@@ -585,8 +837,13 @@ corrplot(res$r,
 
 ```{r}
 #Pos Cor
-corr_1<- ggplot(data_train, aes(startday, stopday)) + geom_jitter(color = "blue") + xlab("startday") + ylab("stopday")
-corr_2<- ggplot(data_train, aes(starttime, stoptime)) + geom_jitter(color = "blue") + xlab("starttime") + ylab("stoptime")
+corr_1<- ggplot(data_train, 
+                aes(startday, stopday)) 
+                + geom_jitter(color = "blue") + xlab("startday") + ylab("stopday")
+
+corr_2<- ggplot(data_train, 
+                aes(starttime, stoptime)) + 
+                geom_jitter(color = "blue") + xlab("starttime") + ylab("stoptime")
 
 grid.arrange(corr_1, corr_2, ncol = 2)
 ```
@@ -624,6 +881,7 @@ barplot(d$Freq,
         names.arg = d$Var1,
         col = 'lightblue')
 ```
+
 ```{r}
 d
 tab = table(data_u85$age_groups,data_u85$dayname)
@@ -678,7 +936,8 @@ data_test = subset(data_test, select = -c(age_groups))
 # define the control using a random forest selection function
 control <- rfeControl(functions=rfFuncs, method="cv", number=5)
 # run the RFE algorithm
-results <- rfe(data_train, as.factor(labels_train), sizes=c(4:15), rfeControl=control)
+results <- rfe(data_train, 
+               as.factor(labels_train), sizes=c(4:15), rfeControl=control)
 # summarize the results
 print(results)
 # list the chosen features
@@ -1077,35 +1336,39 @@ pred_1a = (a$pred_a)
 pred_2a = (a$pred_b)
 pred_3a = (a$pred_c)
 
-df_prob_1 = as.data.frame(predict(rf_100, newdata=subset(data_test, select = -c(age_groups)), type='prob'))
-df_prob_2 = as.data.frame(predict(rf_50, newdata=subset(data_test, select = -c(age_groups)), type='prob'))
-df_prob_3 = as.data.frame(predict(rf_10, newdata=subset(data_test, select = -c(age_groups)), type='prob'))
+df_prob_1 = as.data.frame(predict(rf_100, newdata = 
+                                    subset(data_test, select =
+                                             -c(age_groups)), type='prob'))
+
+df_prob_2 = as.data.frame(predict(rf_50, newdata = 
+                                    subset(data_test, select = 
+                                             -c(age_groups)), type='prob'))
+
+df_prob_3 = as.data.frame(predict(rf_10, newdata = 
+                                    subset(data_test, select = 
+                                             -c(age_groups)), type='prob'))
 
 final = vector(mode="list", length = length(pred_1a))
 w_class = c(0.48, 0.72, 0.79, 0.98)
 c = 0
 
-ty <- function(num, pred){
-
-  if(length(num) != 1){
-    return(pred)
-  }else{
-    return(num)
-  }
-}
-
 for (i in (1:length(final))){
-  if(pred_1a[i] == pred_2a[i] | pred_1a[i] == pred_3a[i] | pred_3a[i] == pred_2a[i]){
+  
+  if(pred_1a[i] == pred_2a[i] | 
+     pred_1a[i] == pred_3a[i] | 
+     pred_3a[i] == pred_2a[i]){
     final[i] = pred_1a[i]
+    
   }else{
+    
     prob_pred_1 = df_prob_1[i,]
     prob_pred_2 = df_prob_2[i,]
     prob_pred_3 = df_prob_3[i,]
-
+    
     m1 = max(prob_pred_1)
     m2 = max(prob_pred_2)
     m3 = max(prob_pred_3)
-
+    
     pos1 = which(prob_pred_1 == m1)
     pos2 = which(prob_pred_2 == m2)
     pos3 = which(prob_pred_3 == m3)
@@ -1113,7 +1376,7 @@ for (i in (1:length(final))){
     pos1 = ty(pos1, pred_1a[i])
     pos2 = ty(pos2, pred_2a[i])
     pos3 = ty(pos3, pred_3a[i])
-
+    
     val1 = (as.numeric(w_class[pos1]) * m1)
     val2 = (as.numeric(w_class[pos2]) * m2)
     val3 = (as.numeric(w_class[pos3]) * m3)
@@ -1122,7 +1385,6 @@ for (i in (1:length(final))){
     if(fin == val1){
       pos = pos1
     }
-
     if(fin == val2){
       pos = pos2
     }
@@ -1529,7 +1791,8 @@ colnames(start_tab) = c("1","2", "3", "4")
 
 for (rowIdx in 1:(nrow(start_tab))) {
   for (colIdx in 1:(ncol(start_tab))) {
-    start_tab[rowIdx, colIdx] = nrow(subset(EDA_id_station, age_groups == colIdx & start.station.name == top_10_start[rowIdx,1]))
+    start_tab[rowIdx, colIdx] = 
+      nrow(subset(EDA_id_station, age_groups == colIdx & start.station.name == top_10_start[rowIdx,1]))
   }
 }
 start_tab$start_name = top_10_start$start_name
@@ -1807,6 +2070,7 @@ for i in range(1,5):
 
 ## Map visualization
 
+<<<<<<< HEAD
 ## Comparison 2019 2020
 
 ```{r}
@@ -2085,3 +2349,106 @@ barplot(t,
         args.legend = list(legend=(c('Subscriber', 'Customer'))))
 ```
 
+=======
+Now we are able to visualize all the information obtained in the section "Maps". The analysis of these results, however, requires at least a minimum knowledge of the main districts of Boston in order to make some assumptions and/or predictions:
+
+-   *Charlestown*, *North End*: oldest residential neighborhood, filled with old buildings dating from 100 or more years ago, sleek condos, stunning waterfront views, plus several wonderful hotels.
+
+-   *West End*: Boston's top museums, concert halls, sports venues, and nightlife.
+
+-   *Downtown*: Financial district.
+
+-   *Cambridge*: Boston's top universities and colleges.
+
+-   *Black Bay*: historic district
+
+![Boston districts: Charlestown - Orange, North End - Green, West End - Yellow, Cambridge - Blue, Downtown - Purple, Black Bay - dark green](images/hood.png)
+
+### Most used stations
+
+\*Before continue with this section we must point out that during the analysis, many locations were repeated in different contexts (ie. most used stations, some of the most popular routes, ec..), thus - only for a matter of readability - in case of overlapping position, we added a small constant to the longitude of them. This will make our maps much more clear.
+
+Here we plot the Top-10 most used stations for each age group.
+
+-   Group 1: as expected, the most used stations by this group of people is strictly related to the university district
+
+-   Group 2: even if most of the stations are located in the Cambridge district, there are two that are located in different places. We can find one in the financial district, and the other one in the Black Bay
+
+-   Group 3-4: this group of people seems to frequent the south-east side. Which is reasonable since in this side there is the city center along with the majority of hospitals and clinics.
+
+![Top 10 most used stations by age group](images/trip_age_19-02.png)
+
+### Most common trips
+
+Further hypotheses can be formulated taking into account the most popular routes for each age group
+
+#### Group 1
+
+![](images/crop1_19.png)
+
+### Group 2
+
+![](images/crop2_19.png)
+
+### Group 3
+
+![](images/crop3_19.png)
+
+### Group 4
+
+![](images/crop4_19.png)
+
+# 2020
+
+As mentioned in the first part of this document, for the 2020 we followed the same workflow used for the analysis of the 2019. Looking for a more coincided section, we will report only the parts that differ from the previous steps.
+
+### Load and preprocess data 2020
+
+```{r}
+tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+tripdata_2020_r = tripdata_2020_r[sample(1:nrow(tripdata_2020_r)),]
+
+split_ages = c(16, 30, 45, 65, 85)
+
+data_u85_20 = tripdata_2020_r[tripdata_2020_r$age <= 85 & tripdata_2020_r$age > 0,]
+data_u85_20$age_groups = cut(data_u85_20$age, 
+                             breaks=split_ages, 
+                             include.lowest = TRUE, labels = FALSE)
+
+data_o85_20 = tripdata_2020_r[tripdata_2020_r$age > 85 | tripdata_2020_r$age == 0,]
+
+data_u85_20 = subset(data_u85_20, select = -c(age, birth.year, year, 
+                              start.station.name, end.station.name))
+
+data_o85_20 = subset(data_o85_20, select = -c(age, birth.year, year, 
+                              start.station.name, end.station.name))
+
+data_u85_20$tripduration = round(data_u85_20$tripduration/60,2)
+data_u85_20$starttime = round(data_u85_20$starttime/60,2)
+data_u85_20$stoptime = round(data_u85_20$stoptime/60,2)
+
+data_u85_20[c("starttime", "stoptime")] = lapply(
+  data_u85_20[c("starttime", "stoptime")], nor)
+
+data_o85_20$tripduration = round(data_o85_20$tripduration/60,2)
+data_o85_20$starttime = round(data_o85_20$starttime/60,2)
+data_o85_20$stoptime = round(data_o85_20$stoptime/60,2)
+
+data_o85_20[c("starttime", "stoptime")] = lapply(
+  data_o85_20[c("starttime", "stoptime")], nor)
+```
+
+## Age group prediction
+
+```{r}
+predict_age_20 = ensemble_predict(data_o85_20)
+save(predict_age_20, file = "predict_age_20.RData")
+```
+
+```{r}
+load("predict_age_20.RData")
+new = data_o85_20
+new$age_groups = predict_age_20$fin
+data_2020 = rbind(data_u85_20, new)
+```
+>>>>>>> 941017c45d164942cbde4c4d0786a3224a921eec
