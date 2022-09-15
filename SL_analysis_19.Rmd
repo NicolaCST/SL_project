@@ -2069,8 +2069,116 @@ for i in range(1,5):
 ```
 
 ## Map visualization
+Now we are able to visualize all the information obtained in the section "Maps". The analysis of these results, however, requires at least a minimum knowledge of the main districts of Boston in order to make some assumptions and/or predictions:
 
-<<<<<<< HEAD
+-   *Charlestown*, *North End*: oldest residential neighborhood, filled with old buildings dating from 100 or more years ago, sleek condos, stunning waterfront views, plus several wonderful hotels.
+
+-   *West End*: Boston's top museums, concert halls, sports venues, and nightlife.
+
+-   *Downtown*: Financial district.
+
+-   *Cambridge*: Boston's top universities and colleges.
+
+-   *Black Bay*: historic district
+
+![Boston districts: Charlestown - Orange, North End - Green, West End - Yellow, Cambridge - Blue, Downtown - Purple, Black Bay - dark green](images/hood.png)
+
+### Most used stations
+
+\*Before continue with this section we must point out that during the analysis, many locations were repeated in different contexts (ie. most used stations, some of the most popular routes, ec..), thus - only for a matter of readability - in case of overlapping position, we added a small constant to the longitude of them. This will make our maps much more clear.
+
+Here we plot the Top-10 most used stations for each age group.
+
+-   Group 1: as expected, the most used stations by this group of people is strictly related to the university district
+
+-   Group 2: even if most of the stations are located in the Cambridge district, there are two that are located in different places. We can find one in the financial district, and the other one in the Black Bay
+
+-   Group 3-4: this group of people seems to frequent the south-east side. Which is reasonable since in this side there is the city center along with the majority of hospitals and clinics.
+
+![Top 10 most used stations by age group](images/trip_age_19-02.png)
+
+### Most common trips
+
+Further hypotheses can be formulated taking into account the most popular routes for each age group
+
+#### Group 1
+
+![](images/crop1_19.png)
+
+### Group 2
+
+![](images/crop2_19.png)
+
+### Group 3
+
+![](images/crop3_19.png)
+
+### Group 4
+
+![](images/crop4_19.png)
+
+# 2020
+
+As mentioned in the first part of this document, for the 2020 we followed the same workflow used for the analysis of the 2019. Looking for a more coincided section, we will report only the parts that differ from the previous steps.
+
+### Load and preprocess data 2020
+
+```{r}
+tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+tripdata_2020_r = tripdata_2020_r[sample(1:nrow(tripdata_2020_r)),]
+
+split_ages = c(16, 30, 45, 65, 85)
+
+data_u85_20 = tripdata_2020_r[tripdata_2020_r$age <= 85 & tripdata_2020_r$age > 0,]
+data_u85_20$age_groups = cut(data_u85_20$age, 
+                             breaks=split_ages, 
+                             include.lowest = TRUE, labels = FALSE)
+
+data_o85_20 = tripdata_2020_r[tripdata_2020_r$age > 85 | tripdata_2020_r$age == 0,]
+
+data_u85_20 = subset(data_u85_20, select = -c(age, birth.year, year, 
+                              start.station.name, end.station.name))
+
+data_o85_20 = subset(data_o85_20, select = -c(age, birth.year, year, 
+                              start.station.name, end.station.name))
+
+data_u85_20$tripduration = round(data_u85_20$tripduration/60,2)
+data_u85_20$starttime = round(data_u85_20$starttime/60,2)
+data_u85_20$stoptime = round(data_u85_20$stoptime/60,2)
+
+data_u85_20[c("starttime", "stoptime")] = lapply(
+  data_u85_20[c("starttime", "stoptime")], nor)
+
+data_o85_20$tripduration = round(data_o85_20$tripduration/60,2)
+data_o85_20$starttime = round(data_o85_20$starttime/60,2)
+data_o85_20$stoptime = round(data_o85_20$stoptime/60,2)
+
+data_o85_20[c("starttime", "stoptime")] = lapply(
+  data_o85_20[c("starttime", "stoptime")], nor)
+```
+
+## Age group prediction
+
+```{r}
+predict_age_20 = ensemble_predict(data_o85_20)
+save(predict_age_20, file = "predict_age_20.RData")
+```
+
+```{r}
+load("predict_age_20.RData")
+new = data_o85_20
+new$age_groups = predict_age_20$fin
+data_2020 = rbind(data_u85_20, new)
+```
+
+
+## Gender prediction
+
+
+
+
+
+
 ## Comparison 2019 2020
 
 ```{r}
@@ -2349,106 +2457,34 @@ barplot(t,
         args.legend = list(legend=(c('Subscriber', 'Customer'))))
 ```
 
-=======
-Now we are able to visualize all the information obtained in the section "Maps". The analysis of these results, however, requires at least a minimum knowledge of the main districts of Boston in order to make some assumptions and/or predictions:
 
--   *Charlestown*, *North End*: oldest residential neighborhood, filled with old buildings dating from 100 or more years ago, sleek condos, stunning waterfront views, plus several wonderful hotels.
 
--   *West End*: Boston's top museums, concert halls, sports venues, and nightlife.
 
--   *Downtown*: Financial district.
 
--   *Cambridge*: Boston's top universities and colleges.
 
--   *Black Bay*: historic district
 
-![Boston districts: Charlestown - Orange, North End - Green, West End - Yellow, Cambridge - Blue, Downtown - Purple, Black Bay - dark green](images/hood.png)
 
-### Most used stations
 
-\*Before continue with this section we must point out that during the analysis, many locations were repeated in different contexts (ie. most used stations, some of the most popular routes, ec..), thus - only for a matter of readability - in case of overlapping position, we added a small constant to the longitude of them. This will make our maps much more clear.
 
-Here we plot the Top-10 most used stations for each age group.
 
--   Group 1: as expected, the most used stations by this group of people is strictly related to the university district
 
--   Group 2: even if most of the stations are located in the Cambridge district, there are two that are located in different places. We can find one in the financial district, and the other one in the Black Bay
 
--   Group 3-4: this group of people seems to frequent the south-east side. Which is reasonable since in this side there is the city center along with the majority of hospitals and clinics.
 
-![Top 10 most used stations by age group](images/trip_age_19-02.png)
 
-### Most common trips
 
-Further hypotheses can be formulated taking into account the most popular routes for each age group
 
-#### Group 1
 
-![](images/crop1_19.png)
 
-### Group 2
 
-![](images/crop2_19.png)
 
-### Group 3
 
-![](images/crop3_19.png)
 
-### Group 4
 
-![](images/crop4_19.png)
 
-# 2020
 
-As mentioned in the first part of this document, for the 2020 we followed the same workflow used for the analysis of the 2019. Looking for a more coincided section, we will report only the parts that differ from the previous steps.
 
-### Load and preprocess data 2020
 
-```{r}
-tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
-tripdata_2020_r = tripdata_2020_r[sample(1:nrow(tripdata_2020_r)),]
 
-split_ages = c(16, 30, 45, 65, 85)
 
-data_u85_20 = tripdata_2020_r[tripdata_2020_r$age <= 85 & tripdata_2020_r$age > 0,]
-data_u85_20$age_groups = cut(data_u85_20$age, 
-                             breaks=split_ages, 
-                             include.lowest = TRUE, labels = FALSE)
 
-data_o85_20 = tripdata_2020_r[tripdata_2020_r$age > 85 | tripdata_2020_r$age == 0,]
 
-data_u85_20 = subset(data_u85_20, select = -c(age, birth.year, year, 
-                              start.station.name, end.station.name))
-
-data_o85_20 = subset(data_o85_20, select = -c(age, birth.year, year, 
-                              start.station.name, end.station.name))
-
-data_u85_20$tripduration = round(data_u85_20$tripduration/60,2)
-data_u85_20$starttime = round(data_u85_20$starttime/60,2)
-data_u85_20$stoptime = round(data_u85_20$stoptime/60,2)
-
-data_u85_20[c("starttime", "stoptime")] = lapply(
-  data_u85_20[c("starttime", "stoptime")], nor)
-
-data_o85_20$tripduration = round(data_o85_20$tripduration/60,2)
-data_o85_20$starttime = round(data_o85_20$starttime/60,2)
-data_o85_20$stoptime = round(data_o85_20$stoptime/60,2)
-
-data_o85_20[c("starttime", "stoptime")] = lapply(
-  data_o85_20[c("starttime", "stoptime")], nor)
-```
-
-## Age group prediction
-
-```{r}
-predict_age_20 = ensemble_predict(data_o85_20)
-save(predict_age_20, file = "predict_age_20.RData")
-```
-
-```{r}
-load("predict_age_20.RData")
-new = data_o85_20
-new$age_groups = predict_age_20$fin
-data_2020 = rbind(data_u85_20, new)
-```
->>>>>>> 941017c45d164942cbde4c4d0786a3224a921eec
