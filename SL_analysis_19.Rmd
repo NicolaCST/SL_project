@@ -2174,6 +2174,18 @@ data_2020 = rbind(data_u85_20, new)
 
 ## Gender prediction
 
+```{r}
+rf_model_gender = readRDS("models/rf_for_gender.rda")
+
+data_no_gender = data_2020[data_2020$gender == 0,]
+data_gender = data_2020[data_2020$gender != 0,]
+
+y_gender = predict(rf_model_gender, newdata = subset(data_no_gender, select = -c(gender)))
+data_no_gender$gender = y_gender
+
+data_2020 = rbind(data_gender, data_no_gender)
+```
+
 
 
 
@@ -2344,6 +2356,7 @@ hist = barplot(tab,
 
 text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 ```
+
 ```{r}
 par(mfrow=c(1,2))
 
