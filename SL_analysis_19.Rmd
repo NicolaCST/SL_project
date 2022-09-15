@@ -244,9 +244,9 @@ add_smote_sample <- function(data, age, gen, k_neig=20, times){
 ensemble_predict <- function(data_use){
   
   # --------------- LOAD TRAINED MODELS -------------- #
-  rf_100 = readRDS(load_dataset("models","rf_best.rda"))
-  rf_50 = readRDS(load_dataset("models", "rf_best_g_50.rda"))
-  rf_10 = readRDS(load_dataset("models", "rf_best_g_10.rda"))
+  rf_100 = readRDS(load_dataset("models","mix_150.rda"))
+  rf_50 = readRDS(load_dataset("models", "mix_100.rda"))
+  rf_10 = readRDS(load_dataset("models", "mix_50.rda"))
   # ------------------------------------------------- #
     
   pred_1 = predict(rf_100, newdata = data_use)
@@ -393,6 +393,32 @@ plot_stats <- function(tab, mode="test", cf=F){
   }
 
 }
+
+
+load_train_20 <- function(){
+  
+  tripdata_2020_r = read.csv(load_dataset("SL_dataset", "tripdata_2020_r.csv"))
+  tripdata_2020_r = tripdata_2020_r[sample(1:nrow(tripdata_2020_r)),]
+  split_ages = c(16, 30, 45, 65, 85)
+  
+  data_u85_20 = tripdata_2020_r[tripdata_2020_r$age <= 85 & tripdata_2020_r$age > 0,]
+  data_u85_20$age_groups = cut(data_u85_20$age, 
+                               breaks=split_ages, 
+                               include.lowest = TRUE, labels = FALSE)
+  
+  data_u85_20 = subset(data_u85_20, select = -c(age, birth.year, year, 
+                                start.station.name, end.station.name))
+  
+  data_u85_20$tripduration = round(data_u85_20$tripduration/60,2)
+  data_u85_20$starttime = round(data_u85_20$starttime/60,2)
+  data_u85_20$stoptime = round(data_u85_20$stoptime/60,2)
+  
+  data_u85_20[c("starttime", "stoptime")] = lapply(
+    data_u85_20[c("starttime", "stoptime")], nor)
+
+  return(data_u85_20)
+}
+
 
 
 our_palette = c(rgb(1, 0, 0), 
@@ -769,7 +795,6 @@ colnames(tab_sex) = c("User sex", "Count", "Perc")
 tab_sex$`User sex`= c("0: Unknown", "1: Male", "2: Female")
 tab_sex
 ```
-
 The vast majority of the users seems to be Male. Even in this case we're facing unbalanced classes.
 
 At this point we could check for differences in the trip duration among Customers and Subscribers
@@ -850,42 +875,32 @@ for (i in 1:nrow(data_u85)){
 dates <- weekdays(as.Date(dates))
 data_u85$dayname = dates
 
-dates <- vector(mode="character", length=nrow(data_o85))
-
-for (i in 1:nrow(data_o85)){
-  dates[i] = paste("2019", data_o85$month[i], data_o85$startday[i], sep="-")
-}
-
-dates <- weekdays(as.Date(dates))
-data_o85$dayname = dates
-
 tab = table(data_u85$dayname)
 d = as.data.frame((tab))
 tmp = d
+
 d[1,] = tmp[3,]
 d[2,] = tmp[4,]
 d[3,] = tmp[5,]
 d[4,] = tmp[2,]
 d[5,] = tmp[7,]
 d[7,] = tmp[1,]
-tmp
+
 barplot(d$Freq,
         names.arg = d$Var1,
         col = 'lightblue')
 ```
 
 ```{r}
-d
 tab = table(data_u85$age_groups,data_u85$dayname)
 tmp = tab
-tmp
+
 tab[,1] = tmp[,3]
 tab[,2] = tmp[,4]
 tab[,3] = tmp[,5]
 tab[,4] = tmp[,2]
 tab[,5] = tmp[,7]
 tab[,7] = tmp[,1]
-tab
 
 barplot(tab,
         names.arg = d$Var1,
@@ -1247,19 +1262,31 @@ It is possible to see that the Random Forest is the most suitable model for our 
 To build a solid meta-model, we first sampled a larger dataset and then we trained three different random forest with different params. The final predictions are based on a class-weighted majority voting system (to each class corresponds a certain weight which is inversely proportional to the number of data available for that class)
 
 ```{r}
+######### JOIN 2020 ###############
+
+data_u85_20 = load_train_20()
+
+data_u85_part = data_u85[1:nrow(data_u85_20),]
+data_train_mix = rbind(data_u85_part, data_u85_20)
+
+data_train_mix = subset(data_train_mix, select = -c(startday, stopday, bikeid))
+data_train_mix = data_train_mix[sample(1:nrow(data_train_mix)),]
+```
+
+```{r}
 ####################### FULL TRAIN ######################################
 
 percs = get_perc(mode = "50k")
 
-one = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
-data_train = as.data.frame(one[[1]])
+one = get_balanced_v2(data_train_mix, percs[[1]], percs[[2]])
+data_ini = as.data.frame(one[[1]])
 data_test = as.data.frame(one[[2]])
 
 # -----------------------------------------------------------------------
 
 # RF 1
-labels_train_one = data_train_one$age_groups
-data_train = subset(data_train_one, select = -c(age_groups))
+labels_train = data_ini$age_groups
+data_train = subset(data_ini, select = -c(age_groups))
 
 rf_model_one = randomForest(x = data_train,
                             y = as.factor(labels_train),
@@ -1271,8 +1298,8 @@ rf_model_one = randomForest(x = data_train,
 # -----------------------------------------------------------------------
 
 # RF 2
-labels_train = data_train$age_groups
-data_train = subset(data_train, select = -c(age_groups))
+labels_train = data_ini$age_groups
+data_train = subset(data_ini, select = -c(age_groups))
 
 rf_model_two = randomForest(x = data_train,
                             y = as.factor(labels_train),
@@ -1284,28 +1311,44 @@ rf_model_two = randomForest(x = data_train,
 # -----------------------------------------------------------------------
 
 # RF 3
-labels_train_three = data_train_three$age_groups
-data_train_three = subset(data_train_three, select = -c(age_groups))
+labels_train_three = data_ini$age_groups
+data_train_three = subset(data_ini, select = -c(age_groups))
 
 rf_model_three = randomForest(x = data_train_three,
                               y = as.factor(labels_train_three),
-                              ntree = 50)
+                              ntree = 50,
+                              keep.forest = TRUE)
+
+
+
+
+# --------------- SAVE TRAINED MODELS -------------- #
+saveRDS(rf_model_one, "models/mix_150.rda")
+saveRDS(rf_model_two, "models/mix_100.rda")
+saveRDS(rf_model_three, "models/mix_50.rda")
+# ------------------------------------------------- #
 
 ```
 
 ```{r}
+# --------------- LOAD DATASET -------------- #
+percs = get_perc(mode = "50k")
+
+one = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
+data_train = as.data.frame(one[[1]])
+data_test = as.data.frame(one[[2]])
 
 # --------------- LOAD TRAINED MODELS -------------- #
-rf_100 = readRDS(load_dataset("models","rf_best.rda"))
-rf_50 = readRDS(load_dataset("models", "rf_best_g_50.rda"))
-rf_10 = readRDS(load_dataset("models", "rf_best_g_10.rda"))
+rf_150 = readRDS(load_dataset("models","mix_150.rda"))
+rf_100 = readRDS(load_dataset("models", "mix_100.rda"))
+rf_50 = readRDS(load_dataset("models", "mix_50.rda"))
 # ------------------------------------------------- #
 
 
 ####### PREDICT TEST #########
-pred_1 = predict(rf_100, newdata = subset(data_test, select = -c(age_groups)))
-pred_2 = predict(rf_50, newdata = subset(data_test, select = -c(age_groups)))
-pred_3 = predict(rf_10, newdata = subset(data_test, select = -c(age_groups)))
+pred_1 = predict(rf_150, newdata = subset(data_test, select = -c(age_groups)))
+pred_2 = predict(rf_100, newdata = subset(data_test, select = -c(age_groups)))
+pred_3 = predict(rf_50, newdata = subset(data_test, select = -c(age_groups)))
 
 a = as.data.frame(pred_1)
 colnames(a) = c("pred_a")
@@ -1328,15 +1371,15 @@ pred_1a = (a$pred_a)
 pred_2a = (a$pred_b)
 pred_3a = (a$pred_c)
 
-df_prob_1 = as.data.frame(predict(rf_100, newdata = 
+df_prob_1 = as.data.frame(predict(rf_150, newdata = 
                                     subset(data_test, select =
                                              -c(age_groups)), type='prob'))
 
-df_prob_2 = as.data.frame(predict(rf_50, newdata = 
+df_prob_2 = as.data.frame(predict(rf_100, newdata = 
                                     subset(data_test, select = 
                                              -c(age_groups)), type='prob'))
 
-df_prob_3 = as.data.frame(predict(rf_10, newdata = 
+df_prob_3 = as.data.frame(predict(rf_50, newdata = 
                                     subset(data_test, select = 
                                              -c(age_groups)), type='prob'))
 
@@ -2149,6 +2192,20 @@ data_o85_20[c("starttime", "stoptime")] = lapply(
   data_o85_20[c("starttime", "stoptime")], nor)
 ```
 
+
+
+```{r}
+test = ensemble_predict(subset(data_train, select = -c(age_groups)))
+
+# test result
+tab = table(test$fin, data_train$age_groups)
+plot_stats(tab, cf = T)
+```
+
+
+
+
+
 ## Age group prediction
 
 ```{r}
@@ -2162,6 +2219,15 @@ new = data_o85_20
 new$age_groups = predict_age_20$fin
 data_2020 = rbind(data_u85_20, new)
 ```
+
+```{r}
+a = ensemble_predict(subset(data_u85_20, select = -c(age_groups)))
+
+# test result
+tab = table(a$fin, data_u85_20$age_groups)
+plot_stats(tab, cf = T)
+```
+
 
 
 ## Gender prediction
@@ -2193,14 +2259,13 @@ data_2020 = rbind(data_gender_20, data_no_gender_20)
 ```
 
 
-
 ## Comparison 2019-2020
 
 ```{r}
 par(mfrow=c(1,2))
 
-barplot_age_group = barplot(table(data_u85$age_groups), 
-     main = "Age groups count 2019",
+barplot_age_group = barplot(table(data_2019$age_groups), 
+     main = "Age groups 2019",
      xlab = "Age group",
      ylab = "Freq",
      col = viridis(4))
@@ -2213,24 +2278,30 @@ legend("topright",
        fill = viridis(4))
 
 barplot_age_group = barplot(table(data_2020$age_groups), 
-     main = "Age groups count 2020",
+     main = "Age groups 2020",
      xlab = "Age group",
      ylab = "Freq",
      col = viridis(4))
-
-legend("topright", 
-       legend = c("Group 1: 16-30", 
-                  "Group 2: 31-45", 
-                  "Group 3: 46-65", 
-                  "Group 4: 65-85"),
-       fill = viridis(4))
 ```
+
+```{r}
+tab_group
+```
+
+```{r}
+tab_group_20 = as.data.frame(table((data_2020$age_groups)))
+tab_group_20$perc = round((tab_group_20$Freq / sum(tab_group_20$Freq))*100,2)
+colnames(tab_group_20) = c("Group", "Count", "Perc")
+tab_group_20
+```
+
+
 
 
 ```{r}
 par(mfrow=c(1,2))
 
-freq_month_19 = hist(tripdata_2019_r$month,
+freq_month_19 = hist(data_2019$month,
      breaks = 12,
      main = "Freq during months 2019",
      xlab = "Months",
@@ -2238,11 +2309,11 @@ freq_month_19 = hist(tripdata_2019_r$month,
      col = "light Blue",
      freq = FALSE)
 
-lines(density(tripdata_2019_r$month, adjust = 4), # density plot
- lwd = 2, # thickness of line
- col = "chocolate3")
+lines(density(data_2019$month, adjust = 4), # density plot
+ lwd = 2, 
+ col = "red")
 
-freq_month_20 = hist(tripdata_2020_r$month, 
+freq_month_20 = hist(data_2020$month, 
      main = "Freq during months 2020",
      xlab = "Months",
      ylab = "Freq",
@@ -2250,15 +2321,15 @@ freq_month_20 = hist(tripdata_2020_r$month,
      freq = FALSE,
      breaks = 12)
 
-lines(density(tripdata_2020_r$month, adjust = 3.5), # density plot
- lwd = 2, # thickness of line
- col = "chocolate3")
+lines(density(data_2020$month, adjust = 4), # density plot
+ lwd = 2, 
+ col = "red")
 ```
 
 ```{r}
 par(mfrow=c(1,2))
 
-freq_age_month = barplot(table(data_u85$age_groups, data_u85$month),
+freq_age_month = barplot(table(data_2019$age_groups, data_2019$month),
                          names.arg = months_list,
                          col = viridis(4),
                          main='Frequency during months 2019')
@@ -2267,8 +2338,7 @@ legend("topleft", legend = c("1", "2", "3", "4"),
        fill = viridis(4),
        cex = 0.8)
 
-
-freq_age_month = barplot(table(data_2020$age_groups, data$month),
+freq_age_month = barplot(table(data_2020$age_groups, data_2020$month),
                          names.arg = months_list,
                          col = viridis(4),
                          main='Frequency during months 2020')
@@ -2277,7 +2347,7 @@ freq_age_month = barplot(table(data_2020$age_groups, data$month),
 
 ```{r}
 par(mfrow=c(1,2))
-freq_age_month = barplot(table(tripdata_2019_r$usertype, tripdata_2019_r$month),
+freq_age_month = barplot(table(data_2019$usertype, data_2019$month),
                          names.arg=months_list,
                          beside = TRUE,
                          col = viridis(2),
@@ -2287,7 +2357,7 @@ legend("topleft", legend = c("0: Customer", "1:Subscriber"),
        fill = viridis(2),
        cex = 0.8)
 
-freq_age_month = barplot(table(tripdata_2020_r$usertype, tripdata_2020_r$month),
+freq_age_month = barplot(table(data_2020$usertype, data_2020$month),
                          names.arg=months_list,
                          beside = TRUE,
                          col = viridis(2),
@@ -2296,13 +2366,14 @@ freq_age_month = barplot(table(tripdata_2020_r$usertype, tripdata_2020_r$month),
 ```
 
 ```{r}
-par(mfrow=c(1,2))
-c1 = density(data_u85[data_u85$age_groups == 1,]$month, adjust = 3.5)
-c2 = density(data_u85[data_u85$age_groups == 2,]$month, adjust = 3.5)
-c3 = density(data_u85[data_u85$age_groups == 3,]$month, adjust = 3.5)
-c4 = density(data_u85[data_u85$age_groups == 4,]$month, adjust = 3.5)
+par(mfrow=c(1,3))
 
-plot(c1, xlim = c(1,12), main = "Age density over months", col = our_palette[1], lwd = 2)
+c1 = density(data_2019[data_2019$age_groups == 1,]$month, adjust = 4)
+c2 = density(data_2019[data_2019$age_groups == 2,]$month, adjust = 4)
+c3 = density(data_2019[data_2019$age_groups == 3,]$month, adjust = 4)
+c4 = density(data_2019[data_2019$age_groups == 4,]$month, adjust = 4)
+
+plot(c1, xlim = c(1,12), main = "Age density over months 19", col = our_palette[1], lwd = 2)
 lines(c2, col = our_palette[2], lwd = 2)
 lines(c3, col = our_palette[3], lwd = 2)
 lines(c4, col = our_palette[4], lwd = 2)
@@ -2313,18 +2384,50 @@ legend("topleft",
        fill = our_palette,
        cex = 0.8)
 
-c1 = density(data_u85[data_2020$age_groups == 1,]$month, adjust = 3.5)
-c2 = density(data_u85[data_2020$age_groups == 2,]$month, adjust = 3.5)
-c3 = density(data_u85[data_2020$age_groups == 3,]$month, adjust = 3.5)
-c4 = density(data_u85[data_2020$age_groups == 4,]$month, adjust = 3.5)
+c1 = density(data_2020[data_2020$age_groups == 1,]$month, adjust = 4)
+c2 = density(data_2020[data_2020$age_groups == 2,]$month, adjust = 4)
+c3 = density(data_2020[data_2020$age_groups == 3,]$month, adjust = 4)
+c4 = density(data_2020[data_2020$age_groups == 4,]$month, adjust = 4)
 
-plot(c1, xlim = c(1,12), main = "Age density over months", col = our_palette[1], lwd = 2)
+plot(c1, xlim = c(1,12), main = "Age density over months 20", col = our_palette[1], lwd = 2)
+lines(c2, col = our_palette[2], lwd = 2)
+lines(c3, col = our_palette[3], lwd = 2)
+lines(c4, col = our_palette[4], lwd = 2)
+```
+
+
+
+```{r}
+par(mfrow=c(1,2))
+
+c1 = density(data_2019[data_2019$age_groups == 1,]$month, adjust = 4)
+c2 = density(data_2019[data_2019$age_groups == 2,]$month, adjust = 4)
+c3 = density(data_2019[data_2019$age_groups == 3,]$month, adjust = 4)
+c4 = density(data_2019[data_2019$age_groups == 4,]$month, adjust = 4)
+
+plot(c1, xlim = c(1,12), main = "Age density over months 19", col = our_palette[1], lwd = 2)
 lines(c2, col = our_palette[2], lwd = 2)
 lines(c3, col = our_palette[3], lwd = 2)
 lines(c4, col = our_palette[4], lwd = 2)
 
 
+legend("topleft", 
+       legend = c("Group 1: 16-30", "Group 2: 31-45", "Group 3: 46-65", "Group 4: 65-85"),
+       fill = our_palette,
+       cex = 0.8)
+
+c1 = density(data_2020[data_2020$age_groups == 1,]$month, adjust = 4)
+c2 = density(data_2020[data_2020$age_groups == 2,]$month, adjust = 4)
+c3 = density(data_2020[data_2020$age_groups == 3,]$month, adjust = 4)
+c4 = density(data_2020[data_2020$age_groups == 4,]$month, adjust = 4)
+
+plot(c1, xlim = c(1,12), main = "Age density over months 20", col = our_palette[1], lwd = 2)
+lines(c2, col = our_palette[2], lwd = 2)
+lines(c3, col = our_palette[3], lwd = 2)
+lines(c4, col = our_palette[4], lwd = 2)
 ```
+
+
 
 ```{r}
 par(mfrow=c(1,2))
