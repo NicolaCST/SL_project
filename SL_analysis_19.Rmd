@@ -628,8 +628,7 @@ data_u85 = tripdata_2019_r[tripdata_2019_r$age <= 85,]
 data_u85$age_groups = cut(data_u85$age, breaks=split_ages, 
                           include.lowest = TRUE, labels = FALSE)
 data_u85 = subset(data_u85, 
-                  select = -c(age, birth.year, year, 
-                              start.station.name, end.station.name))
+                  select = -c(age, birth.year, year))
 
 data_u85$tripduration = round(data_u85$tripduration/60,2)
 data_u85$starttime = round(data_u85$starttime/60,2)
@@ -801,7 +800,11 @@ From this analysis we would have expected the opposite result: We had foreseen a
 
 ## **Correlations**
 
-In this section we will use a tool named Correlation matrix in order to quantify the strength of the linear relationship between two variables. We are basically trying to observe the level of change in one variable due to the change in the other one.
+In this section we will use a tool named Correlation matrix in order to quantify the strength of the linear relationship between two variables. We are basically trying to observe the level of change in one variable due to the change in the other one. We do this because strong relation between predictors may lead to a less performing model, we observe several predictors with a high correlation factor:
+
+-startday, stopday: those variables are correlated because it is unlikely for a user to start and end the trip in different days (unless the trip starts late at night but this eventuality covers a small percentage of the whole dataset)
+
+-starttime, stoptime: the correlation between these two features is expecially dominant between subscribers since they have a limited amuont of time to complete their trips before paying extra money
 
 ```{r}
 percs = get_perc(mode = "10k")
@@ -827,15 +830,13 @@ corrplot(res$r,
          tl.srt = 45)
 ```
 
+Here we show how these couples of feature are distribuited with respect to each other
+
 ```{r}
 #Pos Cor
-corr_1<- ggplot(data_train, 
-                aes(startday, stopday)) 
-                + geom_jitter(color = "blue") + xlab("startday") + ylab("stopday")
+corr_1<- ggplot(data_train, aes(startday, stopday)) + geom_jitter(color = "blue") + xlab("startday") + ylab("stopday")
 
-corr_2<- ggplot(data_train, 
-                aes(starttime, stoptime)) + 
-                geom_jitter(color = "blue") + xlab("starttime") + ylab("stoptime")
+corr_2<- ggplot(data_train, aes(starttime, stoptime)) + geom_jitter(color = "blue") + xlab("starttime") + ylab("stoptime")
 
 grid.arrange(corr_1, corr_2, ncol = 2)
 ```
@@ -2147,7 +2148,7 @@ data_o85_20$starttime = round(data_o85_20$starttime/60,2)
 data_o85_20$stoptime = round(data_o85_20$stoptime/60,2)
 
 data_o85_20[c("starttime", "stoptime")] = lapply(
-  data_o85_20[c("starttime", "stoptime")], nor)
+data_o85_20[c("starttime", "stoptime")], nor)
 ```
 
 ## Age group prediction
@@ -2296,10 +2297,10 @@ freq_age_month = barplot(table(tripdata_2020_r$usertype, tripdata_2020_r$month),
 
 ```{r}
 par(mfrow=c(1,2))
-c1 = density(data_u85[data_u85$age_groups == 1,]$month, adjust = 3.5)
-c2 = density(data_u85[data_u85$age_groups == 2,]$month, adjust = 3.5)
-c3 = density(data_u85[data_u85$age_groups == 3,]$month, adjust = 3.5)
-c4 = density(data_u85[data_u85$age_groups == 4,]$month, adjust = 3.5)
+c1 = density(data_2019[data_2019$age_groups == 1,]$month, adjust = 3.5)
+c2 = density(data_2019[data_2019$age_groups == 2,]$month, adjust = 3.5)
+c3 = density(data_2019[data_2019$age_groups == 3,]$month, adjust = 3.5)
+c4 = density(data_2019[data_2019$age_groups == 4,]$month, adjust = 3.5)
 
 plot(c1, xlim = c(1,12), main = "Age density over months", col = our_palette[1], lwd = 2)
 lines(c2, col = our_palette[2], lwd = 2)
@@ -2312,10 +2313,10 @@ legend("topleft",
        fill = our_palette,
        cex = 0.8)
 
-c1 = density(data_u85[data_2020$age_groups == 1,]$month, adjust = 3.5)
-c2 = density(data_u85[data_2020$age_groups == 2,]$month, adjust = 3.5)
-c3 = density(data_u85[data_2020$age_groups == 3,]$month, adjust = 3.5)
-c4 = density(data_u85[data_2020$age_groups == 4,]$month, adjust = 3.5)
+c1 = density(data_2020[data_2020$age_groups == 1,]$month, adjust = 3.5)
+c2 = density(data_2020[data_2020$age_groups == 2,]$month, adjust = 3)
+c3 = density(data_2020[data_2020$age_groups == 3,]$month, adjust = 3)
+c4 = density(data_2020[data_2020$age_groups == 4,]$month, adjust = 3)
 
 plot(c1, xlim = c(1,12), main = "Age density over months", col = our_palette[1], lwd = 2)
 lines(c2, col = our_palette[2], lwd = 2)
@@ -2475,7 +2476,7 @@ barplot(t,
 ```{r}
 par(mfrow=c(1,2))
 
-tab = table(tripdata_2019_r$gender, tripdata_2019_r$usertype)
+tab = table(data_2019$gender, data_2019$usertype)
 hist = barplot(tab, 
         beside = TRUE, 
         legend = FALSE,
@@ -2484,14 +2485,14 @@ hist = barplot(tab,
         ylab = "Freq",
         ylim=c(0, max(tab) + 100000),
         names.arg = c("Customer: 0", "Subscriber: 1"),
-        col = viridis(3))
+        col = viridis(2))
 
-legend("topleft", legend = c("Unknown", "Male", "Female"),
-       fill = viridis(3))
+legend("topleft", legend = c("Male", "Female"),
+       fill = viridis(2))
 
 text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
-tab = table(data_2020$gender, tripdata_2020_r$usertype)
+tab = table(data_2020$gender, data_2020$usertype)
 hist = barplot(tab, 
         beside = TRUE, 
         legend = FALSE,
