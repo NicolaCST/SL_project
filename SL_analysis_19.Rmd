@@ -627,15 +627,7 @@ split_ages = c(16, 30, 45, 65, 85)
 data_u85 = tripdata_2019_r[tripdata_2019_r$age <= 85,]
 data_u85$age_groups = cut(data_u85$age, breaks=split_ages, 
                           include.lowest = TRUE, labels = FALSE)
-
-data_o85 = tripdata_2019_r[tripdata_2019_r$age > 85,]
-data_o85$age_groups = 0
-
 data_u85 = subset(data_u85, 
-                  select = -c(age, birth.year, year, 
-                              start.station.name, end.station.name))
-
-data_o85 = subset(data_o85, 
                   select = -c(age, birth.year, year, 
                               start.station.name, end.station.name))
 
@@ -2176,22 +2168,33 @@ data_2020 = rbind(data_u85_20, new)
 
 ```{r}
 rf_model_gender = readRDS("models/rf_for_gender.rda")
+```
 
-data_no_gender = data_2020[data_2020$gender == 0,]
-data_gender = data_2020[data_2020$gender != 0,]
+#### 2019
+```{r}
+data_no_gender_19 = data_u85[data_u85$gender == 0,]
+data_gender_19 = data_u85[data_u85$gender != 0,]
 
-y_gender = predict(rf_model_gender, newdata = subset(data_no_gender, select = -c(gender)))
-data_no_gender$gender = y_gender
+y_gender_19 = predict(rf_model_gender, newdata = subset(data_no_gender_19, select = -c(gender)))
+data_no_gender_19$gender = y_gender_19
 
-data_2020 = rbind(data_gender, data_no_gender)
+data_2019 = rbind(data_gender_19, data_no_gender_19)
+```
+
+#### 2020
+```{r}
+data_no_gender_20 = data_2020[data_2020$gender == 0,]
+data_gender_20 = data_2020[data_2020$gender != 0,]
+
+y_gender_20 = predict(rf_model_gender, newdata = subset(data_no_gender_20, select = -c(gender)))
+data_no_gender_20$gender = y_gender_20
+
+data_2020 = rbind(data_gender_20, data_no_gender_20)
 ```
 
 
 
-
-
-
-## Comparison 2019 2020
+## Comparison 2019-2020
 
 ```{r}
 par(mfrow=c(1,2))
