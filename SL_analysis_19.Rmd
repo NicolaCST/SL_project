@@ -11,7 +11,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-**Project Introduction**
+# **Project Introduction**
 
 *BlueBikes* is a public bike sharing system born in July 2011 in Boston. It has grown exponentially over the years:
 
@@ -20,7 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 The system is simple: a user can pick up a bike at any station dock, ride it for a specific amount of time, and then return it to any station for re-docking. Users can also choose to subscribe to the service via an annual (or monthly) plan. However, despite the constant growth of the system, the year 2020 was unlike any before, and like most things, bike share changed radically.
 
-**Project structure**
+## **Project structure**
 
 With this project we want to analyze the impact of the COVID pandemic on the habits of BlueBike's users. Moreover, considering the fact that the dataset of the year 2020 contains many missing values (Gender: 79% missing, BirthYear: 79% missing), we will also try to predict these missing values via some machine learning models.
 
@@ -34,7 +34,7 @@ The aim of the project is twofold, thus it is organized as follow:
 
 4.  We will repeat the same EDA process for the 2020, and then we're going to compare the informations among the two years after predicting the missing values with the models build in the previous steps.
 
-**Dataset analysis**
+## **Dataset analysis**
 
 For this project we used two datasets, both available for free on Kaggle:
 
@@ -43,7 +43,7 @@ For this project we used two datasets, both available for free on Kaggle:
 -   2020 BlueBikes tripdata: 2 million of trips, described with 17 attributes
 
 | Attribute name          | Type      | Description                                     |
-|:----------------|-----------------|--------------------------------------|
+|:-----------------|------------------|-------------------------------------|
 | Tripduration            | Integer   | Duration of the trip in seconds                 |
 | Starttime               | Integer   | Start time and date of trip                     |
 | Stoptime                | Integer   | Stop time and date of trip                      |
@@ -63,7 +63,7 @@ For this project we used two datasets, both available for free on Kaggle:
 
 As mentioned above, the year 2020 had another attribute: *"PostalCode".* In order to be consistent with the analysis, we removed this field to match the same structure of the past year. Moreover, the trips of December 2020 were missing, thus, we downloaded the report of December2020 from the BlueBikes website, and added the missing values.
 
-**Preprocessing**
+## **Preprocessing**
 
 In order to perform a solid analysis, we've arranged an initial data preprocessing phase. Here we present some of the choices derived from this exploration:
 
@@ -78,6 +78,8 @@ In order to perform a solid analysis, we've arranged an initial data preprocessi
 -   We removed all the trips that started in a month and finished in the next one (ex. start as 31/07 23:59 and end 01/08 00:30). This specific kind of trip amount to 0.035% of the total.
 
 -   We removed a suspicious station (latitude and longitude = 0°, this location is named as "Null Island", and is located in international waters in the Atlantic Ocean, roughly 600 km off the coast of West Africa, in the Gulf of Guinea)
+
+-   For the prediction of the Gender, we consider the label 0 ("Unknown") as a missing value, i.e. will be inferred
 
 -   We added a new field, named "Age", and filled it with the difference between the year of the trip and the birth year of the user.
 
@@ -95,7 +97,7 @@ In order to perform a solid analysis, we've arranged an initial data preprocessi
 
 -   With these new information we were able to discard some other fields: Age, BirthYear, Year, Start_station_name and End_station_name
 
-**Import and Utilities**
+### **Import and Utilities**
 
 ```{r}
 #needed libraries
@@ -461,10 +463,11 @@ cool_cf <- function(pred, true){
 
 ```
 
-#### 2019 Dataset preparation
+### 2019 Dataset preparation
 
 ```{r}
-################################## 2019 ###########################################
+################################## 2019 #########################################
+
 tripdata_2019_r = read.csv(
   load_dataset("SL_dataset", "bluebikes_tripdata_2019.csv"))
 
@@ -516,6 +519,7 @@ tripdata_2019_r = tripdata_2019_r[tripdata_2019_r$start.station.latitude > 1 &  
 
 
 #Gender, self-reported by member (Zero=unknown; 1=male; 2=female)
+
 tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Subscriber"] = 1
 tripdata_2019_r$usertype[tripdata_2019_r$usertype == "Customer"] = 0
 
@@ -525,7 +529,7 @@ write.csv(tripdata_2019_r,
           row.names = FALSE)
 ```
 
-#### 2020 Dataset preparation
+### 2020 Dataset preparation
 
 Repeat the same exact procedure used in the 2019
 
@@ -663,6 +667,20 @@ data_u85$stoptime = round(data_u85$stoptime/60,2)
 
 data_u85[c("starttime", "stoptime")] = lapply(data_u85[c("starttime", "stoptime")],
                                             nor)
+
+
+data_o85 = tripdata_2019_r[tripdata_2019_r$age > 85,]
+data_o85$age_groups = 0
+data_o85 = subset(data_o85, 
+                  select = -c(age, birth.year, year, 
+                              start.station.name, end.station.name))
+
+data_o85$tripduration = round(data_o85$tripduration/60,2)
+data_o85$starttime = round(data_o85$starttime/60,2)
+data_o85$stoptime = round(data_o85$stoptime/60,2)
+
+data_o85[c("starttime", "stoptime")] = lapply(data_o85[c("starttime", "stoptime")],
+                                            nor)
 ```
 
 ```{r}
@@ -795,6 +813,7 @@ colnames(tab_sex) = c("User sex", "Count", "Perc")
 tab_sex$`User sex`= c("0: Unknown", "1: Male", "2: Female")
 tab_sex
 ```
+
 The vast majority of the users seems to be Male. Even in this case we're facing unbalanced classes.
 
 At this point we could check for differences in the trip duration among Customers and Subscribers
@@ -826,7 +845,7 @@ From this analysis we would have expected the opposite result: We had foreseen a
 
 ## **Correlations**
 
-In this section we will use a tool named Correlation matrix in order to quantify the strength of the linear relationship between two variables. We are basically trying to observe the level of change in one variable due to the change in the other one. We do this because strong relation between predictors may lead to a less performing model, we observe several predictors with a high correlation factor:  -startday, stopday: those variables are correlated because it is unlikely for a user to start and end the trip in different days (unless the trip starts late at night but this eventuality covers a small percentage of the whole dataset)  -starttime, stoptime: the correlation between these two features is expecially dominant between subscribers since they have a limited amuont of time to complete their trips before paying extra money
+In this section we will use a tool named Correlation matrix in order to quantify the strength of the linear relationship between two variables. We are basically trying to observe the level of change in one variable due to the change in the other one. We do this because strong relation between predictors may lead to a less performing model, we observe several predictors with a high correlation factor: -startday, stopday: those variables are correlated because it is unlikely for a user to start and end the trip in different days (unless the trip starts late at night but this eventuality covers a small percentage of the whole dataset) -starttime, stoptime: the correlation between these two features is expecially dominant between subscribers since they have a limited amuont of time to complete their trips before paying extra money
 
 ```{r}
 percs = get_perc(mode = "10k")
@@ -1259,7 +1278,9 @@ It is possible to see that the Random Forest is the most suitable model for our 
 
 ### Majority-voting ensemble random forest
 
-To build a solid meta-model, we first sampled a larger dataset and then we trained three different random forest with different params. The final predictions are based on a class-weighted majority voting system (to each class corresponds a certain weight which is inversely proportional to the number of data available for that class)
+A single algorithm may not make the perfect prediction for a given dataset. There are plenty of techniques to overcome this limitation, one of them is named "***ensemble learning***". This technique is based on the combination of trained model. The combination can be implemented by aggregating the output from each model with two objectives: reducing the model error and maintaining its generalization.
+
+Moreover, with the objective of increasing the generalization of the model, we build a new dataset by mixing the data from the 2019 and 2020, and used this one to train all the models that make up the ensemble
 
 ```{r}
 ######### JOIN 2020 ###############
@@ -1474,16 +1495,16 @@ legend("topright", c("1", "2", "3", "4"),
 
 The esemble shreds the results of all previous models!
 
-|              |           |
-|:------------:|:---------:|
-| **Accuracy** | **86.05** |
+|              |        |
+|:------------:|:------:|
+| **Accuracy** | **74** |
 
 | Metric    | Group 1 | Group 2 | Group 3 | Group 4 |
 |-----------|---------|---------|---------|---------|
-| Precision | 75.6    | 88.98   | 97.44   | 98.91   |
-| Recall    | 96.69   | 83.92   | 81.24   | 64.7    |
+| Precision | 70.45   | 70.94   | 77.71   | 88.11   |
+| Recall    | 71.67   | 66.04   | 80.47   | 97.25   |
 
-This model will be used to predict the age groups of the 2020 users.
+This model will be used to predict the age groups of the 2020's users.
 
 # GENDER
 
@@ -2193,7 +2214,6 @@ data_o85_20[c("starttime", "stoptime")] = lapply(
   data_o85_20[c("starttime", "stoptime")], nor)
 ```
 
-
 ## Age group prediction
 
 ```{r}
@@ -2208,15 +2228,14 @@ new$age_groups = predict_age_20$fin
 data_2020 = rbind(subset(data_u85_20, select= -c(start.station.name, end.station.name)), new)
 ```
 
-
 ## Gender prediction
 
 ```{r}
 rf_model_gender = readRDS("models/rf_for_gender.rda")
 ```
 
-
 #### 2019
+
 ```{r}
 data_no_gender_19 = data_u85[data_u85$gender == 0,]
 data_gender_19 = data_u85[data_u85$gender != 0,]
@@ -2227,6 +2246,7 @@ data_2019 = rbind(data_gender_19, data_no_gender_19)
 ```
 
 #### 2020
+
 ```{r}
 data_no_gender_20 = data_2020[data_2020$gender == 0,]
 data_gender_20 = data_2020[data_2020$gender != 0,]
@@ -2236,7 +2256,6 @@ data_no_gender_20$gender = y_gender_20
 
 data_2020 = rbind(data_gender_20, data_no_gender_20)
 ```
-
 
 ## Comparison 2019-2020
 
@@ -2342,7 +2361,6 @@ freq_age_month = barplot(table(data_2020$usertype, data_2020$month),
 
 ```
 
-
 ```{r}
 par(mfrow=c(1,2))
 
@@ -2372,8 +2390,6 @@ lines(c2, col = our_palette[2], lwd = 2)
 lines(c3, col = our_palette[3], lwd = 2)
 lines(c4, col = our_palette[4], lwd = 2)
 ```
-
-
 
 ```{r}
 par(mfrow=c(1,2))
@@ -2452,8 +2468,6 @@ legend("topright",
 polygon(den_customer, col = rgb(0.9, 0, 0, alpha = 0.6))
 polygon(den_subscriber, col = rgb(0, 0.9, 0, alpha = 0.6))
 ```
-
-
 
 ```{r}
 par(mfrow=c(1,2))
