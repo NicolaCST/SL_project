@@ -43,7 +43,7 @@ For this project we used two datasets, both available for free on Kaggle:
 -   2020 BlueBikes tripdata: 2 million of trips, described with 17 attributes
 
 | Attribute name          | Type      | Description                                     |
-|:----------------|-----------------|--------------------------------------|
+|:------------------------|-----------|-------------------------------------------------|
 | Tripduration            | Integer   | Duration of the trip in seconds                 |
 | Starttime               | Integer   | Start time and date of trip                     |
 | Stoptime                | Integer   | Stop time and date of trip                      |
@@ -795,6 +795,7 @@ colnames(tab_sex) = c("User sex", "Count", "Perc")
 tab_sex$`User sex`= c("0: Unknown", "1: Male", "2: Female")
 tab_sex
 ```
+
 The vast majority of the users seems to be Male. Even in this case we're facing unbalanced classes.
 
 At this point we could check for differences in the trip duration among Customers and Subscribers
@@ -826,7 +827,7 @@ From this analysis we would have expected the opposite result: We had foreseen a
 
 ## **Correlations**
 
-In this section we will use a tool named Correlation matrix in order to quantify the strength of the linear relationship between two variables. We are basically trying to observe the level of change in one variable due to the change in the other one. We do this because strong relation between predictors may lead to a less performing model, we observe several predictors with a high correlation factor:  -startday, stopday: those variables are correlated because it is unlikely for a user to start and end the trip in different days (unless the trip starts late at night but this eventuality covers a small percentage of the whole dataset)  -starttime, stoptime: the correlation between these two features is expecially dominant between subscribers since they have a limited amuont of time to complete their trips before paying extra money
+In this section we will use a tool named Correlation matrix in order to quantify the strength of the linear relationship between two variables. We are basically trying to observe the level of change in one variable due to the change in the other one. We do this because strong relation between predictors may lead to a less performing model, we observe several predictors with a high correlation factor: -startday, stopday: those variables are correlated because it is unlikely for a user to start and end the trip in different days (unless the trip starts late at night but this eventuality covers a small percentage of the whole dataset) -starttime, stoptime: the correlation between these two features is expecially dominant between subscribers since they have a limited amuont of time to complete their trips before paying extra money
 
 ```{r}
 percs = get_perc(mode = "10k")
@@ -2135,21 +2136,29 @@ Here we plot the Top-10 most used stations for each age group.
 
 ### Most common trips
 
-Further hypotheses can be formulated taking into account the most popular routes for each age group
+Further hypotheses can be formulated taking into account the most popular routes for each age group, we indicate with a blue sign the starting stations and with an orange sign the ending ones.
 
 #### Group 1
+
+We can see that the first group (16-30 y.o) does most their trips in the upper-west side of the city, where the biggest colleges and universities are located, near the Fenway-Kenmore neighborhood, place of some other important educational institutes, and in Beacon Hill, one of the historical and monumental parts of Boston. This may be caused by the amount of students that uses this service to reach the university district. Moreover we can assume in the case of overlapping starting and ending points that there are users living in the nearby area
 
 ![](images/crop1_19.png)
 
 ### Group 2
 
+Group 2 (30-45 y.o.) seems the one with the longer and more spread trips. While Cambridge is still one of the most active district, users from group 2 often visits other part of the city like the southern residential neighborhood and also the financial district. This may be caused mainly by the working routine of the users of this category.
+
 ![](images/crop2_19.png)
 
 ### Group 3
 
+The trips from this group (45-65 y.o.) are significantly shorter then all the others, even the ones from group 4. We can see much less trips made in Cambridge and many more in the southern part of the city.
+
 ![](images/crop3_19.png)
 
 ### Group 4
+
+People from group 4 (65-85 y.o.) has the most varied trips of all, moreover they have an unforseen number of trips starting from Cambridge. We can find very pecurial routes, like the one going from the lake to Cambridge, from Cambridge to Beacon Hill passing through Longfellow Bridge.
 
 ![](images/crop4_19.png)
 
@@ -2193,7 +2202,6 @@ data_o85_20[c("starttime", "stoptime")] = lapply(
   data_o85_20[c("starttime", "stoptime")], nor)
 ```
 
-
 ## Age group prediction
 
 ```{r}
@@ -2208,15 +2216,14 @@ new$age_groups = predict_age_20$fin
 data_2020 = rbind(subset(data_u85_20, select= -c(start.station.name, end.station.name)), new)
 ```
 
-
 ## Gender prediction
 
 ```{r}
 rf_model_gender = readRDS("models/rf_for_gender.rda")
 ```
 
-
 #### 2019
+
 ```{r}
 data_no_gender_19 = data_u85[data_u85$gender == 0,]
 data_gender_19 = data_u85[data_u85$gender != 0,]
@@ -2227,6 +2234,7 @@ data_2019 = rbind(data_gender_19, data_no_gender_19)
 ```
 
 #### 2020
+
 ```{r}
 data_no_gender_20 = data_2020[data_2020$gender == 0,]
 data_gender_20 = data_2020[data_2020$gender != 0,]
@@ -2236,7 +2244,6 @@ data_no_gender_20$gender = y_gender_20
 
 data_2020 = rbind(data_gender_20, data_no_gender_20)
 ```
-
 
 ## Comparison 2019-2020
 
@@ -2342,7 +2349,6 @@ freq_age_month = barplot(table(data_2020$usertype, data_2020$month),
 
 ```
 
-
 ```{r}
 par(mfrow=c(1,2))
 
@@ -2372,8 +2378,6 @@ lines(c2, col = our_palette[2], lwd = 2)
 lines(c3, col = our_palette[3], lwd = 2)
 lines(c4, col = our_palette[4], lwd = 2)
 ```
-
-
 
 ```{r}
 par(mfrow=c(1,2))
@@ -2452,8 +2456,6 @@ legend("topright",
 polygon(den_customer, col = rgb(0.9, 0, 0, alpha = 0.6))
 polygon(den_subscriber, col = rgb(0, 0.9, 0, alpha = 0.6))
 ```
-
-
 
 ```{r}
 par(mfrow=c(1,2))
