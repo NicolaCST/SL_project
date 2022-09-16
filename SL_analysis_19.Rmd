@@ -43,7 +43,7 @@ For this project we used two datasets, both available for free on Kaggle:
 -   2020 BlueBikes tripdata: 2 million of trips, described with 17 attributes
 
 | Attribute name          | Type      | Description                                     |
-|:------------------------|-----------|-------------------------------------------------|
+|:------------------|----------------|--------------------------------------|
 | Tripduration            | Integer   | Duration of the trip in seconds                 |
 | Starttime               | Integer   | Start time and date of trip                     |
 | Stoptime                | Integer   | Stop time and date of trip                      |
@@ -657,9 +657,11 @@ split_ages = c(16, 30, 45, 65, 85)
 data_u85 = tripdata_2019_r[tripdata_2019_r$age <= 85,]
 data_u85$age_groups = cut(data_u85$age, breaks=split_ages, 
                           include.lowest = TRUE, labels = FALSE)
+name_u85 = subset(data_u85, select = c(start.station.name, end.station.name))
 data_u85 = subset(data_u85, 
-                  select = -c(age, birth.year, year, 
-                              start.station.name, end.station.name))
+                  select = -c(age, birth.year, year,
+                              start.station.name,
+                              end.station.name))
 
 data_u85$tripduration = round(data_u85$tripduration/60,2)
 data_u85$starttime = round(data_u85$starttime/60,2)
@@ -671,9 +673,11 @@ data_u85[c("starttime", "stoptime")] = lapply(data_u85[c("starttime", "stoptime"
 
 data_o85 = tripdata_2019_r[tripdata_2019_r$age > 85,]
 data_o85$age_groups = 0
+name_o85 = subset(data_o85, select = c(start.station.name, end.station.name))
 data_o85 = subset(data_o85, 
-                  select = -c(age, birth.year, year, 
-                              start.station.name, end.station.name))
+                  select = -c(age, birth.year, year,
+                              start.station.name,
+                              end.station.name))
 
 data_o85$tripduration = round(data_o85$tripduration/60,2)
 data_o85$starttime = round(data_o85$starttime/60,2)
@@ -1011,7 +1015,7 @@ The multinomial logistic regression is an extension of the logistic regression f
 
 ```{r}
 ####### MULTINOMIAL LOGISTIC REGRESSION ###################
-percs = get_perc(mode = "50k")
+percs = get_perc(mode = "10k")
 
 full = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
 data_train = full[[1]]
@@ -1059,6 +1063,11 @@ knn_model_pred = knn(data_train, data_test, cl=labels_train, k=10)
 tab_test_knn = table(knn_model_pred, labels_test)
 
 plot_stats(tab_test_knn, cf = T)
+```
+
+```{r}
+####################### LOAD KNN ################################
+tab_test_knn = readRDS('cm_knn')
 ```
 
 ### Random Forest
@@ -1209,11 +1218,11 @@ plot_stats(tab_test_fda_age, mode="test", cf = T)
 ```{r}
 ########### SUMMARY TAB AGE MODELS ###########################
 
-#vec_name_model = c("MLR", "KNN", "RF", "LDA", "MDA", "QDA", "FDA")
-vec_name_model = c("MLR", "RF", "LDA", "MDA", "QDA", "FDA")
+vec_name_model = c("MLR", "KNN", "RF", "LDA", "MDA", "QDA", "FDA")
+#vec_name_model = c("MLR", "RF", "LDA", "MDA", "QDA", "FDA")
 
 vec_acc_model = c((round(accuracy(tab_test_mlr_age),2)),
-                  #(round(accuracy(tab_test_knn),2)),
+                  (round(accuracy(tab_test_knn),2)),
                   (round(accuracy(tab_test_rf_age),2)),
                   (round(accuracy(tab_test_lda_age),2)),
                   (round(accuracy(tab_test_mda_age),2)),
@@ -1631,10 +1640,17 @@ data_test = subset(data_test, select = -c(gender))
 ##run knn function
 knn_model_pred = knn(data_train, data_test, cl=labels_train, k=10)
 
-tab_test_knn = table(knn_model_pred, labels_test)
+tab_test_knn_gen = table(knn_model_pred, labels_test)
 
 plot_stats(tab_test_knn, cf = T)
 
+saveRDS(tab_test_knn, file='cm_knn_gender')
+
+```
+
+```{r}
+####################### LOAD KNN ################################
+tab_test_knn_gen = readRDS('cm_knn_gender')
 ```
 
 ```{r}
@@ -1733,12 +1749,11 @@ As previously done with age groups, here we present the results obtained by each
 
 ```{r}
 ########### SUMMARY TAB AGE MODELS ###########################
-
-#vec_name_model = c("GLM", "KNN", "RF", "LDA", "MDA", "QDA")
-vec_name_model = c("GLM", "RF", "LDA", "MDA", "QDA", "FDA")
+vec_name_model = c("GLM", "KNN", "RF", "LDA", "MDA", "QDA")
+#vec_name_model = c("GLM", "RF", "LDA", "MDA", "QDA", "FDA")
 
 vec_acc_model_gen = c((round(accuracy(tab_test_glm_gen),2)),
-                      #(round(accuracy(tab_test_knn),2)),
+                      (round(accuracy(tab_test_knn_gen),2)),
                       (round(accuracy(tab_test_rf_gen),2)),
                       (round(accuracy(tab_test_lda_gen),2)),
                       (round(accuracy(tab_test_mda_gen),2)),
@@ -1971,7 +1986,7 @@ import numpy as np
 import folium
 import webbrowser
 
-df_acc = pd.read_csv('C:/Users/Utente/Desktop/SL_project/SL_dataset/trips_age_19.csv', dtype=object)
+df_acc = pd.read_csv('SL_dataset/trips_age_19.csv', dtype=object)
 
 df_acc['start_name'] = df_acc['start_name'].astype(str)
 df_acc['end_name'] = df_acc['end_name'].astype(str)
@@ -2001,10 +2016,23 @@ for i in range(1,2):
   e_lng = fil['end_longitude']
   e_name = fil['end_name']
   
+  l = []
   
   for s_lat, s_lng, s_name, e_lat, e_lng, e_name in zip(s_lat, s_lng, s_name, e_lat, e_lng, e_name):
+    
     if s_lat == e_lat and s_lng == e_lng:
       s_lng = s_lng + 0.001
+      
+    if s_name in l:
+      s_lng = s_lng + 0.0005
+    else:
+      l.append(s_name)
+      
+    if e_name in l:
+      e_lng = e_lng - 0.0005
+    else:
+      l.append(e_name)
+    
     feature_group.add_child(folium.Marker(location=[s_lat,s_lng], popup=s_name, icon=folium.Icon(color="blue")))
     feature_group.add_child(folium.Marker(location=[e_lat,e_lng], popup=e_name, icon=folium.Icon(color="orange")))
     
@@ -2021,7 +2049,7 @@ import numpy as np
 import folium
 import webbrowser
 
-df_acc = pd.read_csv('C:/Users/Utente/Desktop/SL_project/SL_dataset/2019_pos.csv', dtype=object)
+df_acc = pd.read_csv('SL_dataset/2020_pos.csv', dtype=object)
 
 # ----------------------------- START ----------------------------------------- #
 map_hooray = folium.Map(location=[42.361145, -71.057083], zoom_start = 12) 
@@ -2039,7 +2067,7 @@ for lt, lg, nm in zip(lat, lng, name):
     feature_group.add_child(folium.Marker(location=[lt,lg],popup=nm,icon=folium.Icon(color="blue")))
 
 map_hooray.add_child(feature_group)
-map_hooray.save("BostonMap_top10_start_19.html")
+map_hooray.save("BostonMap_top10_start_20.html")
 # ----------------------------- START ----------------------------------------- # 
 
 
@@ -2059,12 +2087,12 @@ for lt, lg, nm in zip(lat, lng, name):
     feature_group.add_child(folium.Marker(location=[lt,lg],popup=nm,icon=folium.Icon(color="orange")))
 
 map_hooray.add_child(feature_group)
-map_hooray.save("BostonMap_top10_end_19.html")
+map_hooray.save("BostonMap_top10_end_20.html")
 # ----------------------------- END ----------------------------------------- #
 ```
 
 ```{r}
-tab = as.data.frame(table(data$age_groups, data$start.station.name))
+tab = as.data.frame(table(data_2020$age_groups, data_2020$start.station.name))
 colnames(tab) = c("age_groups", "start.station.name", "freq")
 
 one = tab[tab$age_groups == 1,]
@@ -2086,17 +2114,16 @@ temp = as.data.frame(temp)
 for (idx in 1:nrow(temp)){
   name = temp$start.station.name[idx]
   
-  temp[idx, 4] = data$start.station.latitude[data$start.station.name == name][1]
-  temp[idx, 5] = data$start.station.longitude[data$start.station.name == name][1]
+  temp[idx, 4] = data_2020$start.station.latitude[data_2020$start.station.name == name][1]
+  temp[idx, 5] = data_2020$start.station.longitude[data_2020$start.station.name == name][1]
 }
 
 
-write.csv(temp, paste(getwd(), "SL_dataset/start_station_by_age_19.csv", sep = "/"), row.names = FALSE)
+write.csv(temp, paste(getwd(), "SL_dataset/start_station_by_age_20.csv", sep = "/"), row.names = FALSE)
 ```
 
 ```{python}
-df_acc = pd.read_csv('C:/Users/Utente/Desktop/SL_project/SL_dataset/start_station_by_age_19.csv', dtype=object)
-
+df_acc = pd.read_csv('SL_dataset/start_station_by_age_20.csv', dtype=object)
 df_acc['start.station.name'] = df_acc['start.station.name'].astype(str)
 df_acc['age_groups'] = df_acc['age_groups'].astype(int)
 df_acc['freq'] = df_acc['freq'].astype(int)
@@ -2121,7 +2148,7 @@ for i in range(1,5):
   
   
   map_hooray.add_child(feature_group)
-  map_hooray.save("BostonMap_age" + str(i) + ".html")
+  map_hooray.save("BostonMap_age" + str(i) + "_20.html")
 ```
 
 ## Map visualization
@@ -2201,11 +2228,19 @@ data_u85_20$age_groups = cut(data_u85_20$age,
 
 data_o85_20 = tripdata_2020_r[tripdata_2020_r$age > 85 | tripdata_2020_r$age == 0,]
 
+name_u85_20 = subset(data_u85_20, select = c(age, birth.year, year, 
+                              start.station.name, end.station.name))
+x = data_u85_20
 data_u85_20 = subset(data_u85_20, select = -c(age, birth.year, year, 
+                              start.station.name, end.station.name))
+
+name_o85_20 = subset(data_o85_20, select = c(age, birth.year, year, 
                               start.station.name, end.station.name))
 
 data_o85_20 = subset(data_o85_20, select = -c(age, birth.year, year, 
                               start.station.name, end.station.name))
+
+name_2020 = rbind(name_u85_20, name_o85_20)
 
 data_u85_20$tripduration = round(data_u85_20$tripduration/60,2)
 data_u85_20$starttime = round(data_u85_20$starttime/60,2)
@@ -2232,8 +2267,16 @@ save(predict_age_20, file = "predict_age_20.RData")
 ```{r}
 load("predict_age_20.RData")
 new = data_o85_20
+new$start.station.name = name_o85_20$start.station.name
+new$end.station.name = name_o85_20$end.station.name
+
 new$age_groups = predict_age_20$fin
-data_2020 = rbind(subset(data_u85_20, select= -c(start.station.name, end.station.name)), new)
+
+t = data_u85_20
+t$start.station.name = name_u85_20$start.station.name
+t$end.station.name = name_u85_20$end.station.name
+
+data_2020 = rbind(t, new)
 ```
 
 ## Gender prediction
@@ -2246,7 +2289,12 @@ rf_model_gender = readRDS("models/rf_for_gender.rda")
 
 ```{r}
 data_no_gender_19 = data_u85[data_u85$gender == 0,]
+data_no_gender_19$start.station.name = name_u85[data_u85$gender == 0,]$start.station.name
+data_no_gender_19$end.station.name = name_u85[data_u85$gender == 0,]$end.station.name
+
 data_gender_19 = data_u85[data_u85$gender != 0,]
+data_gender_19$start.station.name = name_u85[data_u85$gender != 0,]$start.station.name
+data_gender_19$end.station.name = name_u85[data_u85$gender != 0,]$end.station.name
 
 y_gender_19 = predict(rf_model_gender, newdata = subset(data_no_gender_19, select = -c(gender)))
 data_no_gender_19$gender = y_gender_19
@@ -2257,13 +2305,22 @@ data_2019 = rbind(data_gender_19, data_no_gender_19)
 
 ```{r}
 data_no_gender_20 = data_2020[data_2020$gender == 0,]
+
+
 data_gender_20 = data_2020[data_2020$gender != 0,]
+
 
 y_gender_20 = predict(rf_model_gender, newdata = subset(data_no_gender_20, select = -c(gender)))
 data_no_gender_20$gender = y_gender_20
 
 data_2020 = rbind(data_gender_20, data_no_gender_20)
 ```
+
+```{r}
+data_2020$start.station.name = name_2020$start.station.name
+data_2020$end.station.name = name_2020$end.station.name
+```
+
 
 ## Comparison 2019-2020
 
@@ -2508,4 +2565,145 @@ barplot(t,
         ylab='Fraction',
         col=viridis(2),
         args.legend = list(legend=(c('Subscriber', 'Customer'))))
+```
+
+
+## Map 2020
+
+```{r}
+data_20 = subset(data_2020, select = c(age_groups,
+                                  start.station.name,
+                                  start.station.latitude, 
+                                  start.station.longitude,
+                                  end.station.name,
+                                  end.station.latitude, 
+                                  end.station.longitude))
+
+EDA_id_station = subset(data_20, select = c(start.station.name,
+                                         end.station.name,
+                                         age_groups))
+
+# TOP 10 START #
+tab = as.data.frame(table(EDA_id_station$start.station.name))
+top_10_start_20 = tab[order(tab$Freq, decreasing = T),][1:10,]
+colnames(top_10_start_20) = c("start_name", "Freq")
+
+start_tab_20 = data.frame(matrix(NA, nrow = nrow(top_10_start_20), ncol = 4))
+colnames(start_tab_20) = c("1","2", "3", "4")
+
+for (rowIdx in 1:(nrow(start_tab_20))) {
+  for (colIdx in 1:(ncol(start_tab_20))) {
+    start_tab_20[rowIdx, colIdx] = 
+      nrow(subset(EDA_id_station, age_groups == colIdx & start.station.name == top_10_start_20[rowIdx,1]))
+  }
+}
+start_tab_20$start_name = top_10_start_20$start_name
+
+
+# TOP 10 END #
+end_tab_20 = as.data.frame(table(EDA_id_station$end.station.name))
+top_10_end_20 = tab[order(end_tab_20$Freq, decreasing = T),][1:10,]
+colnames(top_10_end_20) = c("end_name", "Freq")
+
+end_tab_20 = data.frame(matrix(NA, nrow = nrow(top_10_end_20), ncol = 4))
+colnames(end_tab_20) = c("1","2", "3", "4")
+
+for (rowIdx in 1:(nrow(end_tab_20))) {
+  for (colIdx in 1:(ncol(end_tab_20))) {
+    end_tab_20[rowIdx, colIdx] = nrow(subset(EDA_id_station, age_groups == colIdx & end.station.name == top_10_end_20[rowIdx,1]))
+  }
+}
+
+end_tab_20$end_name = top_10_end_20$end_name
+```
+
+```{r}
+top_10_end_20
+
+```
+```{r}
+end_tab_20
+```
+
+```{r}
+bar = barplot(as.matrix(subset(start_tab_20, select = -c(start_name))), 
+        beside = T,
+        cex.names = 1,
+        horiz = T,
+        las=1,
+        main = "TOP-10 Most used start station by age 2020",
+        space = c(0,3),
+        col = viridis(nrow(start_tab)))
+
+legend("topright", legend = start_tab_20$start_name,
+       fill = viridis(nrow(start_tab_20)), cex = 0.8)
+
+```
+
+```{r}
+bar = barplot(as.matrix(subset(end_tab_20, select = -c(end_name))), 
+        beside = T,
+        cex.names = 1,
+        horiz = T,
+        las=1,
+        main = "TOP-10 Most used end station by age 2020",
+        space = c(0,3),
+        col = viridis(nrow(start_tab_20)))
+
+legend("topright", legend = end_tab_20$end_name,
+       fill = viridis(nrow(end_tab_20)), cex = 0.8)
+```
+
+We now save this informations in a .csv file in order to use it in the Python script
+
+```{r}
+map_start = subset(data_2020, select = c(start.station.name,
+                                  start.station.latitude, 
+                                  start.station.longitude))
+map_start = map_start[!duplicated(map_start[ , c("start.station.name")]),]
+map_start = map_start[map_start$start.station.name %in% start_tab_20$start_name,]
+
+
+map_end = subset(data_2020, select = c(end.station.name,
+                                  end.station.latitude, 
+                                  end.station.longitude))
+map_end = map_end[!duplicated(map_end[ , c("end.station.name")]),]
+map_end = map_end[map_end$end.station.name %in% end_tab_20$end_name,]
+
+
+pos_20 = cbind(map_start, 
+               end.station.name = map_end$end.station.name,
+               end.station.latitude = map_end$end.station.latitude,
+               end.station.longitude = map_end$end.station.longitude)
+
+write.csv(pos_20, paste(getwd(), "SL_dataset/2020_pos.csv", sep = "/"), row.names = FALSE)
+```
+
+The most common path divided by age groups
+
+```{r}
+## ------------------------ TOP 10 TRIP BY AGE ----------------------------- ##
+data_top = data_2020[data_2020$start.station.name %in% start_tab_20$start_name,]
+data_top = data_top[data_top$end.station.name %in% end_tab_20$end_name,]
+
+tab = table(data_top$start.station.name, data_top$end.station.name, data_top$age_groups)
+tab = as.data.frame(tab)
+
+
+colnames(tab) = c('start_name', 'end_name', 'age', 'freq')
+for (idx in 1:nrow(tab)){
+  tab$start_longitude[idx] = data_top$start.station.longitude[data_top$start.station.name == tab$start_name[idx]][1]
+  tab$start_latitude[idx] = data_top$start.station.latitude[data_top$start.station.name == tab$start_name[idx]][1]
+  tab$end_longitude[idx] = data_top$end.station.longitude[data_top$end.station.name == tab$end_name[idx]][1]
+  tab$end_latitude[idx] = data_top$end.station.latitude[data_top$end.station.name == tab$end_name[idx]][1]
+}
+
+tmp = tab[tab$age==1,]
+out = tmp[order(tmp$freq, decreasing = T),][1:10,]
+for (i in 2:4){
+  tmp = tab[tab$age==i,]
+  out = rbind(out, tmp[order(tmp$freq, decreasing = T),][1:10,])
+}
+
+write.csv(out, paste(getwd(), "SL_dataset/trips_age_20.csv", sep = "/"), row.names = FALSE)
 ```
