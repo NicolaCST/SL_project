@@ -43,7 +43,7 @@ For this project we used two datasets, both available for free on Kaggle:
 -   2020 BlueBikes tripdata: 2 million of trips, described with 17 attributes
 
 | Attribute name          | Type      | Description                                     |
-|:------------------|----------------|--------------------------------------|
+|:-----------------|------------------|------------------------------------|
 | Tripduration            | Integer   | Duration of the trip in seconds                 |
 | Starttime               | Integer   | Start time and date of trip                     |
 | Stoptime                | Integer   | Stop time and date of trip                      |
@@ -1067,7 +1067,12 @@ plot_stats(tab_test_knn, cf = T)
 
 ```{r}
 ####################### LOAD KNN ################################
-tab_test_knn = readRDS('cm_knn')
+
+tab_test_knn_age = readRDS('cm_knn.RData')
+plot_stats(tab_test_knn, mode="test", cf = T)
+
+precision_knn_age = round(precision(tab_test_knn_age),2)
+recall_knn_age = round(recall(tab_test_knn_age),2)
 ```
 
 ### Random Forest
@@ -1219,10 +1224,9 @@ plot_stats(tab_test_fda_age, mode="test", cf = T)
 ########### SUMMARY TAB AGE MODELS ###########################
 
 vec_name_model = c("MLR", "KNN", "RF", "LDA", "MDA", "QDA", "FDA")
-#vec_name_model = c("MLR", "RF", "LDA", "MDA", "QDA", "FDA")
 
 vec_acc_model = c((round(accuracy(tab_test_mlr_age),2)),
-                  (round(accuracy(tab_test_knn),2)),
+                  (round(accuracy(tab_test_knn_age),2)),
                   (round(accuracy(tab_test_rf_age),2)),
                   (round(accuracy(tab_test_lda_age),2)),
                   (round(accuracy(tab_test_mda_age),2)),
@@ -1242,7 +1246,8 @@ barplot_acc_model = barplot(tab_accuracy_models$vec_acc_model,
 ```
 
 ```{r}
-precision_age= cbind(data.frame(precision_mlr_age), 
+precision_age= cbind(data.frame(precision_mlr_age),
+                      data.frame(precision_knn_age),
                       data.frame(precision_rf_age),
                       data.frame(precision_lda_age),
                       data.frame(precision_mda_age),
@@ -1250,11 +1255,12 @@ precision_age= cbind(data.frame(precision_mlr_age),
                       data.frame(precision_fda_age))
 
 recall_age = cbind(data.frame(recall_mlr_age), 
-                  data.frame(recall_rf_age),
-                  data.frame(recall_lda_age),
-                  data.frame(recall_mda_age),
-                  data.frame(recall_qda_age),
-                  data.frame(recall_fda_age))
+                    data.frame(recall_knn_age),
+                    data.frame(recall_rf_age),
+                    data.frame(recall_lda_age),
+                    data.frame(recall_mda_age),
+                    data.frame(recall_qda_age),
+                    data.frame(recall_fda_age))
 
 par(mfrow=c(1, 2))
 
@@ -1650,7 +1656,11 @@ saveRDS(tab_test_knn, file='cm_knn_gender')
 
 ```{r}
 ####################### LOAD KNN ################################
-tab_test_knn_gen = readRDS('cm_knn_gender')
+tab_test_knn_gen = readRDS('cm_knn_gender.RData')
+plot_stats(tab_test_knn_gen, mode="test", cf = T)
+
+precision_knn_gen = round(precision(tab_test_knn_gen),2)
+recall_knn_gen = round(recall(tab_test_knn_gen),2)
 ```
 
 ```{r}
@@ -1750,7 +1760,6 @@ As previously done with age groups, here we present the results obtained by each
 ```{r}
 ########### SUMMARY TAB AGE MODELS ###########################
 vec_name_model = c("GLM", "KNN", "RF", "LDA", "MDA", "QDA")
-#vec_name_model = c("GLM", "RF", "LDA", "MDA", "QDA", "FDA")
 
 vec_acc_model_gen = c((round(accuracy(tab_test_glm_gen),2)),
                       (round(accuracy(tab_test_knn_gen),2)),
@@ -1777,6 +1786,7 @@ Excluding the good result obtained by the random forest, we would have expected 
 ```{r}
 
 precision_gen= cbind(data.frame(precision_glm_gen), 
+                      data.frame(precision_knn_gen),
                       data.frame(precision_rf_gen),
                       data.frame(precision_lda_gen),
                       data.frame(precision_mda_gen),
@@ -1784,11 +1794,12 @@ precision_gen= cbind(data.frame(precision_glm_gen),
                       data.frame(precision_fda_gen))
 
 recall_gen = cbind(data.frame(recall_glm_gen), 
-                  data.frame(recall_rf_gen),
-                  data.frame(recall_lda_gen),
-                  data.frame(recall_mda_gen),
-                  data.frame(recall_qda_gen),
-                  data.frame(recall_fda_gen))
+                    data.frame(recall_knn_gen),
+                    data.frame(recall_rf_gen),
+                    data.frame(recall_lda_gen),
+                    data.frame(recall_mda_gen),
+                    data.frame(recall_qda_gen),
+                    data.frame(recall_fda_gen))
 
 par(mfrow=c(1,2))
 
@@ -2321,7 +2332,6 @@ data_2020$start.station.name = name_2020$start.station.name
 data_2020$end.station.name = name_2020$end.station.name
 ```
 
-
 ## Comparison 2019-2020
 
 ```{r}
@@ -2567,7 +2577,6 @@ barplot(t,
         args.legend = list(legend=(c('Subscriber', 'Customer'))))
 ```
 
-
 ## Map 2020
 
 ```{r}
@@ -2618,14 +2627,6 @@ end_tab_20$end_name = top_10_end_20$end_name
 ```
 
 ```{r}
-top_10_end_20
-
-```
-```{r}
-end_tab_20
-```
-
-```{r}
 bar = barplot(as.matrix(subset(start_tab_20, select = -c(start_name))), 
         beside = T,
         cex.names = 1,
@@ -2654,8 +2655,6 @@ legend("topright", legend = end_tab_20$end_name,
        fill = viridis(nrow(end_tab_20)), cex = 0.8)
 ```
 
-We now save this informations in a .csv file in order to use it in the Python script
-
 ```{r}
 map_start = subset(data_2020, select = c(start.station.name,
                                   start.station.latitude, 
@@ -2678,8 +2677,6 @@ pos_20 = cbind(map_start,
 
 write.csv(pos_20, paste(getwd(), "SL_dataset/2020_pos.csv", sep = "/"), row.names = FALSE)
 ```
-
-The most common path divided by age groups
 
 ```{r}
 ## ------------------------ TOP 10 TRIP BY AGE ----------------------------- ##
@@ -2707,3 +2704,27 @@ for (i in 2:4){
 
 write.csv(out, paste(getwd(), "SL_dataset/trips_age_20.csv", sep = "/"), row.names = FALSE)
 ```
+
+## Map 2020 visualization
+
+### Most used stations
+
+![Top 10 most used stations by age group in 2020](images/top_used_2020-02.png){alt="Top 10 most used stations by age group"}
+
+### Most common trips in 2020
+
+#### Group 1
+
+![](images/trips_1_20.png){width="687"}
+
+#### Group 2
+
+![](images/trips_2_20.png)
+
+#### Group 3
+
+![](images/trips_3_20.png)
+
+#### Group 4
+
+![](images/trips_4_20.png)
