@@ -1,5 +1,5 @@
 ---
-title: "SL_proj_doc"
+title: "BlueBikes: pre and post COVID outbreak"
 author: "Nicola Cassetta, Andrea di Trani"
 date: '2022-09-11'
 output:
@@ -18,7 +18,9 @@ knitr::opts_chunk$set(echo = TRUE)
 -   From 3,203 annual members in 2011 to 21,261 in 2019
 -   From 610 bicycles in 2011 to 3,500+ in 2019
 
-The system is simple: a user can pick up a bike at any station dock, ride it for a specific amount of time, and then return it to any station for re-docking. Users can also choose to subscribe to the service via an annual (or monthly) plan. However, despite the constant growth of the system, the year 2020 was unlike any before, and like most things, bike share changed radically.
+The system is simple: a user can pick up a bike at any station dock, ride it for a specific amount of time, and then return it to any station for re-docking. Users can also choose to subscribe to the service via an annual (or monthly) plan.
+
+However, despite the constant growth of the system, the year 2020 was unlike any before, and like most things, also bike share changed radically.
 
 ## **Project structure**
 
@@ -26,13 +28,13 @@ With this project we want to analyze the impact of the COVID pandemic on the hab
 
 The aim of the project is twofold, thus it is organized as follow:
 
-1.  Firts we will discuss the main differences between the datasets and the preprocessing steps.
+1.  First we will discuss the main differences between the datasets and the relative preprocessing steps.
 
 2.  Then we will analyze the 2019 dataset first, looking for trends and habits of pre-pandemic users.
 
 3.  As last step for the 2019, we will use some statistical tool, together with some machine learning techniques, to predict the age group of a user, and its gender.
 
-4.  We will repeat the same EDA process for the 2020, and then we're going to compare the informations among the two years after predicting the missing values with the models build in the previous steps.
+4.  We will repeat the same EDA process for the 2020, and then we will compare the informations among the two years after predicting the missing values with the models build in the previous steps.
 
 ## **Dataset analysis**
 
@@ -43,7 +45,7 @@ For this project we used two datasets, both available for free on Kaggle:
 -   2020 BlueBikes tripdata: 2 million of trips, described with 17 attributes
 
 | Attribute name          | Type      | Description                                     |
-|:------------------|-------------------|----------------------------------|
+|:------------------|------------------|-----------------------------------|
 | Tripduration            | Integer   | Duration of the trip in seconds                 |
 | Starttime               | Integer   | Start time and date of trip                     |
 | Stoptime                | Integer   | Stop time and date of trip                      |
@@ -67,7 +69,7 @@ As mentioned above, the year 2020 had another attribute: *"PostalCode".* In orde
 
 In order to perform a solid analysis, we've arranged an initial data preprocessing phase. Here we present some of the choices derived from this exploration:
 
--   Rather than seconds, we decided to use minutes
+-   Rather than seconds, we decided to use minutes to describe the duration of a trip
 
 -   We've rearranged the Starttime (and Stoptime) format "*2019-12-01 00:01:25.3240*" by splitting it in "StartDate" and "StartTime". Then we splitted "StartDate" into "StartDay" / "StartMonth" / "StartYear" and discarded month and year (repeated data)
 
@@ -83,9 +85,9 @@ In order to perform a solid analysis, we've arranged an initial data preprocessi
 
 -   We added a new field, named "Age", and filled it with the difference between the year of the trip and the birth year of the user.
 
--   The new field "Age" brought to light some suspicious values (max age: 133). To get rid of these values, we divided the dataset into two sub-dataset: the first, considered the main one, with a max age \<= 85, the second one, with age \> 85 that will be discarded (this type of entries amount to the 0.0003% of the total data).
+-   The new field "Age" brought to light some suspicious values (max age: 133). To get rid of these values, we divided the dataset into two sub-datasets: the first, considered the main one, with a max age of 85, the second one, with ages greater than 85 that will be discarded (this type of entries amount to the 0.0003% of the total data).
 
--   In order to perform a more robust classification on the age, we rearranged the users age into "*Age Groups*":
+-   In order to perform a more robust classification on the age, we rearranged the user's age into "*Age Groups*":
 
     -   [16, 30) - Group 1
 
@@ -95,7 +97,7 @@ In order to perform a solid analysis, we've arranged an initial data preprocessi
 
     -   [65, 85] - Group 4
 
--   With these new information we were able to discard some other fields: Age, BirthYear, Year, Start_station_name and End_station_name
+-   With these new information we were able to discard some other fields: Age, BirthYear, Year.
 
 ### **Import and Utilities**
 
@@ -655,10 +657,9 @@ summary(tripdata_2019_r)
 
 ### **EDA on 2019**
 
-As mentioned in the Preprocessing section, it is possible to see some outliers in the age field (probably mainly caused by the users during the registration to the system)
+As mentioned in the **Preprocessing** section, it is possible to see some outliers in the age field (probably mainly caused by the users during the registration to the system)
 
 ```{r}
-
 par(mfrow=c(1,2))
 
 hist(tripdata_2019_r$age,
@@ -693,7 +694,7 @@ cat("\nusers <=85:", nrow(tripdata_2019_r[tripdata_2019_r$age <= 85 & tripdata_2
 
 ### Age groups analysis
 
-In this section we're going to split the ages of the users in 4 groups, as mentioned in the preprocessing section. Moreover, we also provide a normalization of the fields: tripduration, starttime, stoptime along with the exclusion of some fields - like: age, birth.year and year - since at this point they do not provide any useful (or new) information
+In this section we're going to split the ages of the users in 4 groups, as mentioned in the **Preprocessing** section. Moreover, we also provide a normalization of the fields: *tripduration*, *starttime*, *stoptime* along with the exclusion of some fields - like: *age*, *birth.year* and *year* - since at this point they do not provide any useful (or new) information.
 
 ```{r}
 #Split in age groups, remove useless fields, and use Minutes
@@ -748,12 +749,12 @@ legend("topright",
        fill = viridis(4))
 ```
 
-| Group |  Count  | Perc  |
-|:-----:|:-------:|:-----:|
-|   1   | 1264993 | 50.16 |
-|   2   | 695466  | 27.58 |
-|   3   | 541818  | 21.48 |
-|   4   |  19718  | 0.78  |
+| Group |  Count  |  Perc   |
+|:-----:|:-------:|:-------:|
+|   1   | 1264993 | 50.16 % |
+|   2   | 695466  | 27.58 % |
+|   3   | 541818  | 21.48 % |
+|   4   |  19718  | 0.78 %  |
 
 As we can see the classes are highly unbalanced. However we expected the 1st class (i.e. students and young-workers) to be the most populated, and the 4th one (i.e. elderly persons) to be the less populated.
 
@@ -809,7 +810,7 @@ freq_age_month = barplot(table(tripdata_2019_r$usertype, tripdata_2019_r$month),
 
 legend("topleft", legend = c("0: Customer", "1:Subscriber"),
        fill = viridis(2),
-       cex = 0.8)
+       cex = 0.7)
 
 ```
 
@@ -854,15 +855,11 @@ text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
 ```
 
-BlueBikes seems to boast of loyal users.
-
-```{r}
-tab_sex = as.data.frame(table(data_u85$gender))
-tab_sex$perc = round((tab_sex$Freq / sum(tab_sex$Freq))*100,2)
-colnames(tab_sex) = c("User sex", "Count", "Perc")
-tab_sex$`User sex`= c("0: Unknown", "1: Male", "2: Female")
-tab_sex
-```
+| Gender  |  Count  |  Perc   |
+|:-------:|:-------:|:-------:|
+| Unknown | 277622  | 11,01 % |
+|  Male   | 1652204 | 65,51 % |
+| Female  | 592169  | 23,48 % |
 
 The vast majority of the users seems to be Male. Even in this case we're facing unbalanced classes.
 
@@ -877,7 +874,7 @@ subscriber_dur = EDA_UT[EDA_UT$usertype == 1,]
 den_customer = density(log(customer_dur$tripduration))
 den_subscriber = density(log(subscriber_dur$tripduration))
 
-plot(den_customer, main="Trip duration: Customer vs Sub ", col="red")
+plot(den_customer, main="Trip duration: Customer vs Subscriber ", col="red")
 lines(den_subscriber, col="green")
 
 legend("topright", 
@@ -891,11 +888,11 @@ polygon(den_subscriber, col = rgb(0, 0.9, 0, alpha = 0.6))
 
 ```
 
-From this analysis we would have expected the opposite result: We had foreseen a longer average duration of the trips by the subscribers. By checking the monthly and the annual membership plans on the BlueBikes site however, we've seen that both include unlimited 45-min rides. At this point we could assume that subscribers are more prone to take more, but shorter, trips.
+From this analysis we would have expected the opposite result: we had foreseen a longer average duration of the trips by the subscribers, compared to the Customers. By checking the monthly and the annual membership plans on the BlueBikes site however, we've seen that both include unlimited 45-min rides. At this point we could assume that subscribers are more prone to take more, but shorter, trips.
 
 ## **Correlations**
 
-In this section we will use a tool named Correlation matrix in order to quantify the strength of the linear relationship between two variables. We are basically trying to observe the level of change in one variable due to the change in the other one. We do this because strong relation between predictors may lead to a less performing model.
+In this section we will use a tool named *Correlation matrix* to quantify the strength of the linear relationship between two variables. We are basically trying to observe the level of change in one variable due to the change in the other one. We do this because strong relation between predictors may lead to a less performing model.
 
 ```{r}
 percs = get_perc(mode = "10k")
@@ -930,9 +927,9 @@ corr_2<- ggplot(data_train, aes(starttime, stoptime)) + geom_jitter(color = "blu
 grid.arrange(corr_1, corr_2, ncol = 2)
 ```
 
--   startday, stopday: those variables are correlated because it is unlikely for a user to start and end the trip in different days
+-   *startday*, *stopday*: those variables are correlated because it is unlikely for a user to start and end the trip in different days.
 
--   starttime, stoptime: the correlation between these two features is expecially dominant between subscribers since they have a limited amount of time to complete their trips before paying extra money
+-   *starttime*, *stoptime*: the correlation between these two features is especially dominant between subscribers since they have a limited amount of time to complete their trips before paying extra money
 
 ```{r}
 week_2019 = get_week_days(data_u85, "2019")
@@ -953,19 +950,23 @@ legend("topright", c("1", "2", "3", "4"),
        fill = viridis(4), cex = 0.7)
 ```
 
+In this case, our predictions have been confirmed: we had foreseen a higher amount of trips during the week due to the working / studying routine of the users, and the results seem to confirm our hypothesis.
+
 ### **Feature selection**
 
-Feature selection is the process of reducing the number of input variables when developing a predictive model. This is really convenient when dealing with data science problems, which tipically consist of thousands of entries and several features. It is desirable to reduce the number of input variables to both reduce the computational cost of modeling and, in some cases, to improve the performance of the model. The stepwise selection consists of iteratively adding and removing predictors, in the predictive model, in order to find the subset of variables in the data set resulting in the best performing model, that is a model that lowers prediction error.
+Feature selection is the process of reducing the number of input variables when developing a predictive model. This is really convenient when dealing with data science problems, which typically consist of thousands of entries and several features. It is desirable to reduce the number of input variables to both reduce the computational cost of modeling and, in some cases, to improve the performance of the model itself.
 
-There are three strategies of stepwise regression:
+The stepwise selection consists of iteratively adding (or removing) predictors, in order to find the subset of variables that lead to the best performing model.
 
--   Forward selection: which starts with no predictors in the model, iteratively adds the most contributive predictors, and stops when the improvement is no longer statistically significant.
+There are three strategies of stepwise selecion:
 
--   Backward selection: (or backward elimination), which starts with all predictors in the model (full model), iteratively removes the least contributive predictors, and stops when you have a model where all predictors are statistically significant.
+-   *Forward selection*: which starts with no predictors in the model, and iteratively adds the most important predictors, and stops when the improvement is no longer statistically significant.
 
--   Stepwise selection: which is a combination of forward and backward selections.
+-   *Backward selection*: (or backward elimination) which starts with all predictors in the model, and iteratively removes the least interesting predictors.
 
-We've decided to perform the feature selection through a backward selection.
+-   *Combine*: which is a combination of forward and backward selections.
+
+We've decided to perform the feature selection through a *backward selection*.
 
 ```{r}
 ####### BACKW FEATURE SELECTION ###################
@@ -994,23 +995,25 @@ predictors(results)
 # plot the results
 plot(results, type=c("g", "o"))
 
-#BEST FEATURE -> ALL - startday, stopday, bikeid (12)
-
 ```
 
-This step has highlighted startday, stopday, bikeid as the least important feature. But they're not just not important: they degrade the accuracy of the model! For this reason, we're going to remove this feature when training our models.
+![Feature selection: accuracy on age group prediction](images/feature%20sel-01.png)
+
+The feature selection step has highlighted *startday*, *stopday*, *bikeid* as the least important feature. But they're not just not important: they degrade the accuracy of the model! For this reason, we're going to remove this feature when training our models.
 
 ```{r}
 data_u85 = subset(data_u85, select = -c(startday, stopday, bikeid))
 ```
 
-**Handling of unbalanced data**
+**Handling unbalanced data**
 
-As mentioned in the introduction, our dataset is highly unbalanced when considering the age groups. In order to build non-dummy models, we must act on the distribution of data. To overcome this problem we've build two functions, named "get_perc" and "get_balanced_v2": by using this function we're able to produce an almost balanced subsampled dataset. We used this subsample also to produce the correlation matrix, the feature selection and many other tests (also, without the subsampling we would not be able to produce this tests due to the huge amount of data).
+As mentioned in the **Introduction**, our dataset is highly unbalanced when considering both the age groups and the gender. In order to build non-dummy models we've build two functions, named "*get_perc*" and "*get_balanced_v2*". By using these function we're able to produce an almost balanced subsampled dataset.
+
+\*we used this subsample also to produce the correlation matrix, the feature selection and many other tests (without the subsampling we would not be able to produce this tests due to the huge amount of data).
 
 # MODELS
 
-We tested several models, at the end of this section we will show the results among all of them:
+We tested several models, at the end of this section we will compare the results among:
 
 -   Multinomial Logistic Regression
 -   K-Nearest Neighborhood
@@ -1050,7 +1053,7 @@ plot_stats(tab_test_mlr_age, cf = T)
 
 ### KNN
 
-The K - nearest neighbors algorithm is a simple non-parametric *machine learning* method used for classification (but can be used also for regression). This algo predicts the outcome of a new observation based on the distance of k similar cases
+The K - nearest neighbors algorithm is a simple non-parametric machine learning method used for classification (but can be used also for regression). This method predicts the outcome of a new observation based on the distance of k similar cases
 
 ```{r}
 ####################### KNN ################################
@@ -1067,10 +1070,7 @@ data_test = subset(data_test, select = -c(age_groups))
 
 ##run knn function
 knn_model_pred = knn(data_train, data_test, cl=labels_train, k=10)
-
 tab_test_knn = table(knn_model_pred, labels_test)
-
-plot_stats(tab_test_knn, cf = T)
 ```
 
 ```{r}
@@ -1085,7 +1085,7 @@ recall_knn_age = round(recall(tab_test_knn_age),2)
 
 ### Random Forest
 
-The Random forest classifier is basically a set of decision trees (DT). This algo establishes the outcome based on the predictions of the decision trees. It predicts by taking the average or mean of the output from various trees.
+The Random forest classifier is basically a set of decision trees (DT). This methos establishes the outcome based on the predictions of the decision trees. It predicts by taking the average or mean of the output from various trees.
 
 ```{r}
 ################### RANDOM FOREST ##########################
@@ -1122,11 +1122,6 @@ plot_stats(tab_test_rf_age, mode="test", cf = T)
 precision_rf_age = round(precision(tab_test_rf_age),2)
 recall_rf_age = round(recall(tab_test_rf_age),2)
 
-```
-
-```{r}
-# Variable importance plot
-varImpPlot(rf_model)
 ```
 
 ## Discriminant Analysis
@@ -1289,13 +1284,15 @@ legend("topright", c("1", "2", "3", "4"),
        fill = viridis(4), cex = 0.8)
 ```
 
-It is possible to see that the Random Forest is the most suitable model for our task. It provides both a quite good accuracy (compared with the other models), together with the highest values of precision and recall. However, we could try to improve the performance of this model via a majority voting ensemble, i.e. a model that combines the predictions from multiple other models.
+It is possible to see that the Random Forest is the most suitable model for our task. It provides both a quite good accuracy (compared with the other models), together with the highest values of precision and recall.
+
+However, we could try to improve the performance of this model via a majority voting ensemble, i.e. a model that combines the predictions from multiple other models.
 
 ### Majority-voting ensemble random forest
 
 A single algorithm may not make the perfect prediction for a given dataset. There are plenty of techniques to overcome this limitation, one of them is named "***ensemble learning***". This technique is based on the combination of trained model. The combination can be implemented by aggregating the output from each model with two objectives: reducing the model error and maintaining its generalization.
 
-Moreover, with the objective of increasing the generalization of the model, we build a new dataset by mixing the data from the 2019 and 2020, and used this one to train all the models that make up the ensemble
+Moreover, with the objective of increasing the generalization of the model, we build a **new dataset** by mixing the data from the 2019 and 2020, and used this one to train all the models that make up the ensemble.
 
 ```{r}
 ######### JOIN 2020 ###############
@@ -1469,7 +1466,7 @@ for (i in (1:length(final))){
 }
 
 a$fin = as.numeric(final)
-saveRDS(as.data.frame(a), file = "Pred_ready/predict_age19.Rdata")
+saveRDS(as.data.frame(a), file = "Pred_ready/predict_age_19.Rdata")
 
 # test result
 result_ensemble = table(a$fin, data_test$age_groups)
@@ -1477,7 +1474,7 @@ plot_stats(result_ensemble, cf = T)
 ```
 
 ```{r}
-pred_age_2019 = readRDS("Pred_ready/predict_age19.Rdata")
+pred_age_2019 = readRDS("Pred_ready/predict_age_19.Rdata")
 cool_cf(pred_age_2019$fin, data_test$age_groups)
 ```
 
@@ -1512,20 +1509,20 @@ legend("topright", c("1", "2", "3", "4"),
 
 The esemble shreds the results of all previous models!
 
-|              |        |
-|:------------:|:------:|
-| **Accuracy** | **74** |
+|              |           |
+|:------------:|:---------:|
+| **Accuracy** | **73.93** |
 
 | Metric    | Group 1 | Group 2 | Group 3 | Group 4 |
 |-----------|---------|---------|---------|---------|
-| Precision | 70.45   | 70.94   | 77.71   | 88.11   |
-| Recall    | 71.67   | 66.04   | 80.47   | 97.25   |
+| Precision | 69.33   | 72      | 77.44   | 88.96   |
+| Recall    | 70.65   | 66.59   | 80.67   | 97.56   |
 
 This model will be used to predict the age groups of the 2020's users.
 
 # GENDER
 
-To predict the gender of a user, we used the same workflow shown in the age group section. Here's a brief recap:
+To predict the gender of a user, we used the same workflow shown in the **age group** section. Here's a brief recap:
 
 -   Backward feature selection (the features removed are the same of the previous analysis)
 
@@ -1677,15 +1674,13 @@ lda_model = lda(gender~., data = data_train)
 pred = predict(lda_model, newdata = data_train)
 tab_train = table(pred$class, data_train$gender)
 
-plot_stats(tab_train, mode="train", cf = F)
-
 ## TEST SET
 pred = predict(lda_model, newdata = data_test)
 tab_test_lda_gen = table(pred$class, data_test$gender)
 
 precision_lda_gen = round(precision(tab_test_lda_gen),2)
 recall_lda_gen = round(recall(tab_test_lda_gen),2)
-
+plot_stats(tab_train, mode="train", cf = F)
 plot_stats(tab_test_lda_gen, cf = T)
 
 ```
@@ -1783,7 +1778,7 @@ barplot_acc_model = barplot(tab_accuracy_models$vec_acc_model_gen,
 
 ```
 
-Excluding the good result obtained by the random forest, we would have expected a little higher values from the other models, considering the fact that we moved from a multiclass classification problem (4 classes in age groups) to a binomial one (gender m/f).
+Excluding the good result obtained by the random forest, we would have expected a little higher values from the other models, considering the fact that we moved from a multiclass classification problem (4 classes in age groups) to a binary one (gender m/f).
 
 ```{r}
 
@@ -1830,21 +1825,21 @@ legend("topright", c("Male", "Female"),
        fill = viridis(2), cex = 0.8)
 ```
 
-In this case a simple random forest outperform all the other methods:
+In this case a simple random forest outperform all the other methods on both accuracy and precision/recall:
 
-| **Accuracy** | 73.66 |
+| **Accuracy** | 71.31 |
 |:------------:|:-----:|
 
 | Metric    | Male  | Female |
 |-----------|-------|--------|
-| Precision | 75.07 | 72.18  |
-| Recall    | 73.99 | 73.31  |
+| Precision | 73.06 | 69.5   |
+| Recall    | 71.12 | 71.51  |
 
-In this case we consider the results obtained sufficiently high, thus we will not proceed with the construction of another meta-model. This model will be used to predict the gender of a user in the 2020.
+We consider the obtained result sufficiently high, thus we will not proceed with the construction of another meta-model. This model will be used to predict the gender of a user in the 2020.
 
 # MAPS
 
-As mentioned in the introduction, the year 2020 brought changes that no one would have expected. This caused significant changes even in the habits of all of us. To compare some of the differences between the pre-pandemic and the post-pandemic users, we will we will dive into a deep exploration of the data related to the BlueBikes stations: their locations, the most used and also the most common path divided by age groups. In order to be able to visualize these informations in the most suitable way, we will use a combination of R and some scripts in Python: thanks to the Folium library we will be able to generate Boston's maps, pointing out all the points of interest, along with user's favorite paths.
+The year 2020 brought changes that no one would have expected. This caused significant changes even in the habits of all of us. To compare some of the differences between the pre-pandemic and the post-pandemic users, we will dive into a deep exploration of the data related to the BlueBikes stations: their locations, the most used and also the most common trips divided by age groups. In order to be able to visualize these informations in the most suitable way, we will use a combination of R and some scripts in Python: thanks to the Folium library we will be able to generate Boston's maps, pointing out all the points of interest, along with user's favorite paths.
 
 Here we first generate the tables with the most used stations, both start and end ones.
 
@@ -1897,14 +1892,6 @@ for (rowIdx in 1:(nrow(end_tab))) {
 }
 
 end_tab$end_name = top_10_end$end_name
-```
-
-```{r}
-head(start_tab)
-```
-
-```{r}
-head(end_tab)
 ```
 
 ```{r}
@@ -2166,7 +2153,7 @@ for i in range(1,5):
 
 ## Map visualization
 
-Now we are able to visualize all the information obtained in the section "Maps". The analysis of these results, however, requires at least a minimum knowledge of the main districts of Boston in order to make some assumptions and/or predictions:
+Now we are able to visualize all the information obtained in the section "**Maps**". The analysis of these results, however, requires at least a minimum knowledge of the main districts of Boston in order to make some assumptions and/or predictions:
 
 -   *Charlestown*, *North End*: oldest residential neighborhood, filled with old buildings dating from 100 or more years ago, sleek condos, stunning waterfront views, plus several wonderful hotels.
 
@@ -2182,13 +2169,13 @@ Now we are able to visualize all the information obtained in the section "Maps".
 
 ### Most used stations
 
-\*Before continue with this section we must point out that during the analysis, many locations were repeated in different contexts (ie. most used stations, some of the most popular routes, ec..), thus - only for a matter of readability - in case of overlapping position, we added a small constant to the longitude of them. This will make our maps much more clear.
+\*Before continue with this section we must point out that during the analysis, many locations were repeated in different contexts (ie. most used stations, some of the most popular routes, ec..), thus - only for a matter of readability - in case of overlapping position, we added a small constant to the longitude of the point. This will make our maps much more clear.
 
-Here we plot the Top-10 most used stations for each age group.
+Here we plot the **Top-10 most used stations** for each **age group**.
 
--   Group 1: as expected, the most used stations by this group of people is strictly related to the university district
+-   Group 1: as expected, the most used stations by this group of people is strictly related to the university district.
 
--   Group 2: even if most of the stations are located in the Cambridge district, there are two that are located in different places. We can find one in the financial district, and the other one in the Black Bay
+-   Group 2: even if most of the stations are located in the Cambridge district, there some that are located in different places. We can find them in the financial district, in the Black Bay and also in Charlestown.
 
 -   Group 3-4: this group of people seems to frequent the south-east side. Which is reasonable since in this side there is the city center along with the majority of hospitals and clinics.
 
@@ -2196,17 +2183,17 @@ Here we plot the Top-10 most used stations for each age group.
 
 ### Most common trips
 
-Further hypotheses can be formulated taking into account the most popular routes for each age group, we indicate with a blue sign the starting stations and with an orange sign the ending ones.
+Further hypotheses can be formulated taking into account the most popular routes for each age group. We point with a blue sign the starting stations and with an orange one the ending ones.
 
 #### Group 1
 
-We can see that the first group (16-30 y.o) does most their trips in the upper-west side of the city, where the biggest colleges and universities are located, near the Fenway-Kenmore neighborhood, place of some other important educational institutes, and in Beacon Hill, one of the historical and monumental parts of Boston. This may be caused by the amount of students that uses this service to reach the university district. Moreover we can assume in the case of overlapping starting and ending points that there are users living in the nearby area
+We can see that the first group does most their trips in the upper-west side of the city, where the biggest colleges and universities are located, near the Fenway-Kenmore neighborhood, place of some other important educational institutes, and in Beacon Hill, one of the historical and monumental parts of Boston. This may be caused by the amount of students that uses this service to reach the university district. Moreover we can assume in the case of overlapping starting and ending points that there are users living in the nearby area
 
 ![](images/crop1_19.png)
 
 ### Group 2
 
-Group 2 (30-45 y.o.) seems the one with the longer and more spread trips. While Cambridge is still one of the most active district, users from group 2 often visits other part of the city like the southern residential neighborhood and also the financial district. This may be caused mainly by the working routine of the users of this category.
+Group 2 seems the one with the longest and more spread trips. While Cambridge is still one of the most active district, users of this group often visits other part of the city like the southern residential neighborhood and also the financial district. This may be caused mainly by the working routine of the users of this category.
 
 ![](images/crop2_19.png)
 
@@ -2218,7 +2205,7 @@ The trips from this group (45-65 y.o.) are significantly shorter then all the ot
 
 ### Group 4
 
-People from group 4 (65-85 y.o.) has the most varied trips of all, moreover they have an unforseen number of trips starting from Cambridge. We can find very pecurial routes, like the one going from the lake to Cambridge, from Cambridge to Beacon Hill passing through Longfellow Bridge.
+People from group 4 has the most varied trips of all, moreover they have an unforseen number of trips starting from Cambridge. We can find very pecurial routes, like the one going from the lake to Cambridge, from Cambridge to Beacon Hill passing through Longfellow Bridge.
 
 ![](images/crop4_19.png)
 
@@ -2473,7 +2460,7 @@ In order to explain the change in the density of trips in 2020, we checked the i
 
 The minimum amount of trips occurs during April, that's because from 05/04 up to the end of that month, the city entered in its first true lockdown.
 
-From 11/05 instead, the first reopenings were announced: from this moment up to September, the restrictive measures have been gradually removed.
+From 11/05 instead, the first re-openings were announced: from this moment up to September, the restrictive measures have been gradually removed.
 
 However, the rapid decrease in the density during the last quarter in 2020, is caused by the fact that the number of infections was rapidly increasing, as the number of restrictive measures.
 
