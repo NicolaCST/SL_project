@@ -43,7 +43,7 @@ For this project we used two datasets, both available for free on Kaggle:
 -   2020 BlueBikes tripdata: 2 million of trips, described with 17 attributes
 
 | Attribute name          | Type      | Description                                     |
-|:-----------------|------------------|------------------------------------|
+|:------------------|-------------------|----------------------------------|
 | Tripduration            | Integer   | Duration of the trip in seconds                 |
 | Starttime               | Integer   | Start time and date of trip                     |
 | Stoptime                | Integer   | Stop time and date of trip                      |
@@ -381,6 +381,8 @@ rstudio_viewer <- function(file_name, file_path = NULL) {
     rstudioapi::viewer(html_file)
 }
 
+
+
 plot_stats <- function(tab, mode="test", cf=F){
   
   cat("\n", "---------", mode, "---------", "\n")
@@ -395,6 +397,50 @@ plot_stats <- function(tab, mode="test", cf=F){
   }
 
 }
+
+
+
+get_week_days <- function(dataset, year){
+  
+  dates = vector(mode="character", length=nrow(dataset))
+
+  for (i in 1:nrow(dataset)){
+    dates[i] = paste(year, dataset$month[i], dataset$startday[i], sep="-")
+  }
+  
+  dates = weekdays(as.Date(dates))
+  dataset$dayname = dates
+  
+  tab = table(dataset$dayname)
+  d = as.data.frame((tab))
+  tmp = d
+  
+  d[1,] = tmp[3,]
+  d[2,] = tmp[4,]
+  d[3,] = tmp[5,]
+  d[4,] = tmp[2,]
+  d[5,] = tmp[7,]
+  d[7,] = tmp[1,]
+  colnames(d) = c("Day", "Freq")
+  
+  
+  tab = table(dataset$age_groups, dataset$dayname)
+  tmp = tab
+  
+  tab[,1] = tmp[,3]
+  tab[,2] = tmp[,4]
+  tab[,3] = tmp[,5]
+  tab[,4] = tmp[,2]
+  tab[,5] = tmp[,7]
+  tab[,7] = tmp[,1]
+
+  out = list("days" = d, "days_age" = tab)
+  
+  return(out)
+  
+}
+
+
 
 
 load_train_20 <- function(){
@@ -702,16 +748,16 @@ legend("topright",
        fill = viridis(4))
 ```
 
-```{r}
-tab_group = as.data.frame(table((data_u85$age_groups)))
-tab_group$perc = round((tab_group$Freq / sum(tab_group$Freq))*100,2)
-colnames(tab_group) = c("Group", "Count", "Perc")
-tab_group
-```
+| Group |  Count  | Perc  |
+|:-----:|:-------:|:-----:|
+|   1   | 1264993 | 50.16 |
+|   2   | 695466  | 27.58 |
+|   3   | 541818  | 21.48 |
+|   4   |  19718  | 0.78  |
 
 As we can see the classes are highly unbalanced. However we expected the 1st class (i.e. students and young-workers) to be the most populated, and the 4th one (i.e. elderly persons) to be the less populated.
 
-At this point we want to analyzie the trends of trips over months and over the age groups:
+At this point we want to analyze the trends of trips over months and over the age groups:
 
 ```{r}
 par(mfrow=c(1,2))
@@ -849,7 +895,7 @@ From this analysis we would have expected the opposite result: We had foreseen a
 
 ## **Correlations**
 
-In this section we will use a tool named Correlation matrix in order to quantify the strength of the linear relationship between two variables. We are basically trying to observe the level of change in one variable due to the change in the other one. We do this because strong relation between predictors may lead to a less performing model, we observe several predictors with a high correlation factor: -startday, stopday: those variables are correlated because it is unlikely for a user to start and end the trip in different days (unless the trip starts late at night but this eventuality covers a small percentage of the whole dataset) -starttime, stoptime: the correlation between these two features is expecially dominant between subscribers since they have a limited amuont of time to complete their trips before paying extra money
+In this section we will use a tool named Correlation matrix in order to quantify the strength of the linear relationship between two variables. We are basically trying to observe the level of change in one variable due to the change in the other one. We do this because strong relation between predictors may lead to a less performing model.
 
 ```{r}
 percs = get_perc(mode = "10k")
@@ -877,56 +923,29 @@ corrplot(res$r,
 
 ```{r}
 #Pos Cor
-corr_1<- ggplot(data_train, 
-                aes(startday, stopday)) 
-                + geom_jitter(color = "blue") + xlab("startday") + ylab("stopday")
+corr_1<- ggplot(data_train, aes(startday, stopday)) + geom_jitter(color = "blue") + xlab("startday") + ylab("stopday")
 
-corr_2<- ggplot(data_train, 
-                aes(starttime, stoptime)) + 
-                geom_jitter(color = "blue") + xlab("starttime") + ylab("stoptime")
+corr_2<- ggplot(data_train, aes(starttime, stoptime)) + geom_jitter(color = "blue") + xlab("starttime") + ylab("stoptime")
 
 grid.arrange(corr_1, corr_2, ncol = 2)
 ```
 
+-   startday, stopday: those variables are correlated because it is unlikely for a user to start and end the trip in different days
+
+-   starttime, stoptime: the correlation between these two features is expecially dominant between subscribers since they have a limited amount of time to complete their trips before paying extra money
+
 ```{r}
-dates <- vector(mode="character", length=nrow(data_u85))
+week_2019 = get_week_days(data_u85, "2019")
 
-for (i in 1:nrow(data_u85)){
-  dates[i] = paste("2019", data_u85$month[i], data_u85$startday[i], sep="-")
-}
-
-dates <- weekdays(as.Date(dates))
-data_u85$dayname = dates
-
-tab = table(data_u85$dayname)
-d = as.data.frame((tab))
-tmp = d
-
-d[1,] = tmp[3,]
-d[2,] = tmp[4,]
-d[3,] = tmp[5,]
-d[4,] = tmp[2,]
-d[5,] = tmp[7,]
-d[7,] = tmp[1,]
-
-barplot(d$Freq,
-        names.arg = d$Var1,
+barplot(week_2019$days$Freq,
+        names.arg = week_2019$days$Day,
         col = 'lightblue')
+
 ```
 
 ```{r}
-tab = table(data_u85$age_groups,data_u85$dayname)
-tmp = tab
-
-tab[,1] = tmp[,3]
-tab[,2] = tmp[,4]
-tab[,3] = tmp[,5]
-tab[,4] = tmp[,2]
-tab[,5] = tmp[,7]
-tab[,7] = tmp[,1]
-
-barplot(tab,
-        names.arg = d$Var1,
+barplot(week_2019$days_age,
+        names.arg = week_2019$days$Day,
         beside=FALSE,
         col = viridis(4))
 
@@ -989,17 +1008,6 @@ data_u85 = subset(data_u85, select = -c(startday, stopday, bikeid))
 
 As mentioned in the introduction, our dataset is highly unbalanced when considering the age groups. In order to build non-dummy models, we must act on the distribution of data. To overcome this problem we've build two functions, named "get_perc" and "get_balanced_v2": by using this function we're able to produce an almost balanced subsampled dataset. We used this subsample also to produce the correlation matrix, the feature selection and many other tests (also, without the subsampling we would not be able to produce this tests due to the huge amount of data).
 
-```{r}
-percs = get_perc(mode = "50k")
-full = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
-data_train = as.data.frame(full[1])
-
-tab_group_balanced = as.data.frame(table((data_train$age_groups)))
-tab_group_balanced$perc = round((tab_group_balanced$Freq / sum(tab_group_balanced$Freq))*100,2)
-colnames(tab_group_balanced) = c("Group", "Count", "Perc")
-tab_group_balanced
-```
-
 # MODELS
 
 We tested several models, at the end of this section we will show the results among all of them:
@@ -1015,7 +1023,7 @@ The multinomial logistic regression is an extension of the logistic regression f
 
 ```{r}
 ####### MULTINOMIAL LOGISTIC REGRESSION ###################
-percs = get_perc(mode = "10k")
+percs = get_perc(mode = "50k")
 
 full = get_balanced_v2(data_u85, percs[[1]], percs[[2]])
 data_train = full[[1]]
@@ -1068,8 +1076,8 @@ plot_stats(tab_test_knn, cf = T)
 ```{r}
 ####################### LOAD KNN ################################
 
-tab_test_knn_age = readRDS('cm_knn.RData')
-plot_stats(tab_test_knn, mode="test", cf = T)
+tab_test_knn_age = readRDS('cm_knn_age.RData')
+plot_stats(tab_test_knn_age, mode="test", cf = T)
 
 precision_knn_age = round(precision(tab_test_knn_age),2)
 recall_knn_age = round(recall(tab_test_knn_age),2)
@@ -1119,13 +1127,6 @@ recall_rf_age = round(recall(tab_test_rf_age),2)
 ```{r}
 # Variable importance plot
 varImpPlot(rf_model)
-```
-
-```{r}
-rocs = multiclass.roc(as.numeric(labels_test), as.numeric(rf_model_pred))
-rs = rocs[["rocs"]]
-plot.roc(rs[[1]])
-sapply(2:length(rs),function(i) lines.roc(rs[[i]],col=i))
 ```
 
 ## Discriminant Analysis
@@ -1262,8 +1263,6 @@ recall_age = cbind(data.frame(recall_mlr_age),
                     data.frame(recall_qda_age),
                     data.frame(recall_fda_age))
 
-par(mfrow=c(1, 2))
-
 barplot_prec_model_age = barplot(as.matrix(precision_age), 
                           beside = T,
                           main = "Precision on AGE GROUPS",
@@ -1275,8 +1274,9 @@ barplot_prec_model_age = barplot(as.matrix(precision_age),
 legend("topright", c("1", "2", "3", "4"),
        fill = viridis(4), cex = 0.8)
 
+```
 
-
+```{r}
 barplot_rec_model_age = barplot(as.matrix(recall_age), 
                           beside = T,
                           main = "Recall on AGE GROUPS",
@@ -1469,6 +1469,7 @@ for (i in (1:length(final))){
 }
 
 a$fin = as.numeric(final)
+saveRDS(as.data.frame(a), file = "Pred_ready/predict_age19.Rdata")
 
 # test result
 result_ensemble = table(a$fin, data_test$age_groups)
@@ -1476,7 +1477,8 @@ plot_stats(result_ensemble, cf = T)
 ```
 
 ```{r}
-cool_cf(a$fin, data_test$age_groups)
+pred_age_2019 = readRDS("Pred_ready/predict_age19.Rdata")
+cool_cf(pred_age_2019$fin, data_test$age_groups)
 ```
 
 ```{r}
@@ -1656,7 +1658,7 @@ saveRDS(tab_test_knn, file='cm_knn_gender')
 
 ```{r}
 ####################### LOAD KNN ################################
-tab_test_knn_gen = readRDS('cm_knn_gender.RData')
+tab_test_knn_gen = readRDS('Pred_ready/cm_knn_gender.Rdata')
 plot_stats(tab_test_knn_gen, mode="test", cf = T)
 
 precision_knn_gen = round(precision(tab_test_knn_gen),2)
@@ -1759,7 +1761,7 @@ As previously done with age groups, here we present the results obtained by each
 
 ```{r}
 ########### SUMMARY TAB AGE MODELS ###########################
-vec_name_model = c("GLM", "KNN", "RF", "LDA", "MDA", "QDA")
+vec_name_model = c("GLM", "KNN", "RF", "LDA", "MDA", "QDA", "FDA")
 
 vec_acc_model_gen = c((round(accuracy(tab_test_glm_gen),2)),
                       (round(accuracy(tab_test_knn_gen),2)),
@@ -1801,8 +1803,6 @@ recall_gen = cbind(data.frame(recall_glm_gen),
                     data.frame(recall_qda_gen),
                     data.frame(recall_fda_gen))
 
-par(mfrow=c(1,2))
-
 barplot_prec_model = barplot(as.matrix(precision_gen), 
                           beside = T,
                           main = "Precision on GENDER",
@@ -1814,7 +1814,9 @@ barplot_prec_model = barplot(as.matrix(precision_gen),
 legend("topright", c("Male", "Female"),
        fill = viridis(2), cex = 0.8)
 
+```
 
+```{r}
 
 barplot_rec_model = barplot(as.matrix(recall_gen), 
                           beside = T,
@@ -1830,13 +1832,13 @@ legend("topright", c("Male", "Female"),
 
 In this case a simple random forest outperform all the other methods:
 
-| **Accuracy** | **71.48** |
-|:------------:|:---------:|
+| **Accuracy** | 73.66 |
+|:------------:|:-----:|
 
 | Metric    | Male  | Female |
 |-----------|-------|--------|
-| Precision | 72.65 | 69.44  |
-| Recall    | 80.55 | 59.31  |
+| Precision | 75.07 | 72.18  |
+| Recall    | 73.99 | 73.31  |
 
 In this case we consider the results obtained sufficiently high, thus we will not proceed with the construction of another meta-model. This model will be used to predict the gender of a user in the 2020.
 
@@ -2241,7 +2243,7 @@ data_o85_20 = tripdata_2020_r[tripdata_2020_r$age > 85 | tripdata_2020_r$age == 
 
 name_u85_20 = subset(data_u85_20, select = c(age, birth.year, year, 
                               start.station.name, end.station.name))
-x = data_u85_20
+
 data_u85_20 = subset(data_u85_20, select = -c(age, birth.year, year, 
                               start.station.name, end.station.name))
 
@@ -2276,7 +2278,7 @@ save(predict_age_20, file = "predict_age_20.RData")
 ```
 
 ```{r}
-load("predict_age_20.RData")
+load("Pred_ready/predict_age_20.RData")
 new = data_o85_20
 new$start.station.name = name_o85_20$start.station.name
 new$end.station.name = name_o85_20$end.station.name
@@ -2357,16 +2359,17 @@ barplot_age_group = barplot(table(data_2020$age_groups),
      col = viridis(4))
 ```
 
-```{r}
-tab_group
-```
+| 2019 | 2020 |
+|:----:|:----:|
 
-```{r}
-tab_group_20 = as.data.frame(table((data_2020$age_groups)))
-tab_group_20$perc = round((tab_group_20$Freq / sum(tab_group_20$Freq))*100,2)
-colnames(tab_group_20) = c("Group", "Count", "Perc")
-tab_group_20
-```
+| Group |  Count  | Perc  |  Count  | Perc  |
+|-------|:-------:|:-----:|:-------:|:-----:|
+| 1     | 1264993 | 50.16 | 1115881 | 53.82 |
+| 2     | 695466  | 27.58 | 548419  | 26.45 |
+| 3     | 541818  | 21.48 | 373044  | 17.99 |
+| 4     |  19718  | 0.78  |  36103  | 1.74  |
+
+From our analysis we can see that in 2020, the number of users belonging to the first group increased by 3%, the number of users belonging to the second group is almost unchanged (-1,5%), while the third group is decreased by 3.50%. We can also notice a +1% on the number of users of the 4th group.
 
 ```{r}
 par(mfrow=c(1,2))
@@ -2466,6 +2469,48 @@ lines(c3, col = our_palette[3], lwd = 2)
 lines(c4, col = our_palette[4], lwd = 2)
 ```
 
+In order to explain the change in the density of trips in 2020, we checked the information regarding the restrictive measures applied in the city of Boston at that time: the first measure adopted (13/03) was the stop to the gatherings of more than 250 people, moreover, shortly thereafter, all public and private educational institutes got closed for a month. In the same period, dining at restaurant and gatherings of more 25 people got banned.
+
+The minimum amount of trips occurs during April, that's because from 05/04 up to the end of that month, the city entered in its first true lockdown.
+
+From 11/05 instead, the first reopenings were announced: from this moment up to September, the restrictive measures have been gradually removed.
+
+However, the rapid decrease in the density during the last quarter in 2020, is caused by the fact that the number of infections was rapidly increasing, as the number of restrictive measures.
+
+```{r}
+week_2020 = get_week_days(data_2020, "2020")
+
+par(mfrow = c(1,2))
+
+barplot(week_2019$days$Freq,
+        names.arg = week_2019$days$Day,
+        col = 'lightblue')
+
+barplot(week_2020$days$Freq,
+        names.arg = week_2020$days$Day,
+        col = 'lightgreen')
+```
+
+```{r}
+par(mfrow = c(1,2))
+
+barplot(week_2019$days_age,
+        names.arg = week_2019$days$Day,
+        beside=FALSE,
+        col = viridis(4))
+
+legend("topright", c("1", "2", "3", "4"),
+       fill = viridis(4), cex = 0.7)
+
+
+barplot(week_2020$days_age,
+        names.arg = week_2020$days$Day,
+        beside=FALSE,
+        col = viridis(4))
+```
+
+Here we can notice an inversion of the trend: while in the 2019 the trips were mostly taken during the week, in the 2020 seems like that users start to prefer the weekend. This could be caused by the fact that the COVID outbreak has led to the drastic increase in smart working and unemployment rate.
+
 ```{r}
 par(mfrow=c(1,2))
 
@@ -2499,6 +2544,70 @@ hist = barplot(tab,
 
 text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 ```
+
+```{r}
+par(mfrow=c(1,2))
+
+tab = table(data_2019$usertype)
+hist = barplot(tab, 
+        beside = TRUE, 
+        legend = FALSE,
+        main = "UserType in 2019",
+        xlab = "UserType",
+        ylab = "Freq",
+        ylim=c(0, max(tab) + 100000),
+        names.arg = c("Customer: 0", "Subscriber: 1"),
+        col = viridis(2))
+
+
+tab = table(data_2020$usertype)
+hist = barplot(tab, 
+        beside = TRUE, 
+        legend = FALSE,
+        main = "UserType in 2020",
+        xlab = "UserType",
+        ylab = "Freq",
+        ylim=c(0, max(tab) + 100000),
+        names.arg = c("Customer: 0", "Subscriber: 1"),
+        col = viridis(2))
+
+
+```
+
+```{r}
+par(mfrow=c(1,2))
+
+t=table(data_2019$usertype, data_2019$month)
+s=colSums(t)
+for (i in 1:12){
+  t[2*i-1] = t[2*i-1]/s[i]
+  t[2*i] = t[2*i]/s[i]
+}
+
+barplot(t,
+        main='Usertype % per month 2019',
+        xlab='Month',
+        ylab='Fraction',
+        col=viridis(2),
+        legend=TRUE,
+        args.legend = list(legend=(c('Subscriber', 'Customer'))))
+
+t=table(data_2020$usertype, data_2020$month)
+s=colSums(t)
+for (i in 1:12){
+  t[2*i-1] = t[2*i-1]/s[i]
+  t[2*i] = t[2*i]/s[i]
+}
+
+barplot(t,
+        main='Usertype % per month 2020',
+        xlab='Month',
+        ylab='Fraction',
+        col=viridis(2),
+        args.legend = list(legend=(c('Subscriber', 'Customer'))))
+```
+
+In the 2020 we can see an increment on the number of Customers. We can hypothesize that the lockdown, together with all the other restrictive measures, has prompted users to cancel their subscription.
 
 ```{r}
 par(mfrow = c(1,2))
@@ -2544,39 +2653,6 @@ polygon(den_customer, col = rgb(0.9, 0, 0, alpha = 0.6))
 polygon(den_subscriber, col = rgb(0, 0.9, 0, alpha = 0.6))
 ```
 
-```{r}
-par(mfrow=c(1,2))
-
-t=table(data_2019$usertype, data_2019$month)
-s=colSums(t)
-for (i in 1:12){
-  t[2*i-1] = t[2*i-1]/s[i]
-  t[2*i] = t[2*i]/s[i]
-}
-
-barplot(t,
-        main='Usertype fraction per month 2019',
-        xlab='Month',
-        ylab='Fraction',
-        col=viridis(2),
-        legend=TRUE,
-        args.legend = list(legend=(c('Subscriber', 'Customer'))))
-
-t=table(data_2020$usertype, data_2020$month)
-s=colSums(t)
-for (i in 1:12){
-  t[2*i-1] = t[2*i-1]/s[i]
-  t[2*i] = t[2*i]/s[i]
-}
-
-barplot(t,
-        main='Usertype fraction per month 2020',
-        xlab='Month',
-        ylab='Fraction',
-        col=viridis(2),
-        args.legend = list(legend=(c('Subscriber', 'Customer'))))
-```
-
 ## Map 2020
 
 ```{r}
@@ -2611,6 +2687,7 @@ start_tab_20$start_name = top_10_start_20$start_name
 
 # TOP 10 END #
 end_tab_20 = as.data.frame(table(EDA_id_station$end.station.name))
+tab = as.data.frame(table(EDA_id_station$end.station.name))
 top_10_end_20 = tab[order(end_tab_20$Freq, decreasing = T),][1:10,]
 colnames(top_10_end_20) = c("end_name", "Freq")
 
@@ -2637,7 +2714,7 @@ bar = barplot(as.matrix(subset(start_tab_20, select = -c(start_name))),
         col = viridis(nrow(start_tab)))
 
 legend("topright", legend = start_tab_20$start_name,
-       fill = viridis(nrow(start_tab_20)), cex = 0.8)
+       fill = viridis(nrow(start_tab_20)), cex = 0.7)
 
 ```
 
@@ -2652,7 +2729,7 @@ bar = barplot(as.matrix(subset(end_tab_20, select = -c(end_name))),
         col = viridis(nrow(start_tab_20)))
 
 legend("topright", legend = end_tab_20$end_name,
-       fill = viridis(nrow(end_tab_20)), cex = 0.8)
+       fill = viridis(nrow(end_tab_20)), cex = 0.7)
 ```
 
 ```{r}
@@ -2728,3 +2805,5 @@ write.csv(out, paste(getwd(), "SL_dataset/trips_age_20.csv", sep = "/"), row.nam
 #### Group 4
 
 ![](images/trips_4_20.png)
+
+While we have not detected particular changes in the most used routes, we must point out that there is a huge difference in the most used stations: from the 2019, it is possible to see that many of the most used stations in the Cambridge district, are missing. Instead we can see that the stations located in the city center, along with the ones located in the financial district and the hospital area, got used much much more, leading to an increment among all the age group, of the use of this part of the city.
