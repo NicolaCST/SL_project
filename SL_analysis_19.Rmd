@@ -89,13 +89,13 @@ In order to perform a solid analysis, we've arranged an initial data preprocessi
 
 -   In order to perform a more robust classification on the age, we rearranged the user's age into "*Age Groups*":
 
-    -   [16, 30) - Group 1
+    -   [16, 30] - Group 1
 
-    -   [30, 45) - Group 2
+    -   [31, 45] - Group 2
 
-    -   [45, 65) - Group 3
+    -   [46, 65] - Group 3
 
-    -   [65, 85] - Group 4
+    -   [66, 85] - Group 4
 
 -   With these new information we were able to discard some other fields: Age, BirthYear, Year.
 
@@ -513,7 +513,7 @@ cool_cf <- function(pred, true){
 
 ### 2019 Dataset preparation
 
-```{r}
+```{r, eval = FALSE}
 ################################## 2019 #########################################
 
 tripdata_2019_r = read.csv(
@@ -581,7 +581,7 @@ write.csv(tripdata_2019_r,
 
 Repeat the same exact procedure used in the 2019
 
-```{r}
+```{r, eval = FALSE}
 
 tripdata_2020_r = read.csv(
   load_dataset("SL_dataset", "bluebikes_tripdata_2020.csv"))
@@ -968,7 +968,7 @@ There are three strategies of stepwise selecion:
 
 We've decided to perform the feature selection through a *backward selection*.
 
-```{r}
+```{r, eval = FALSE}
 ####### BACKW FEATURE SELECTION ###################
 percs = get_perc(mode = "50k")
 
@@ -1055,7 +1055,7 @@ plot_stats(tab_test_mlr_age, cf = T)
 
 The K - nearest neighbors algorithm is a simple non-parametric machine learning method used for classification (but can be used also for regression). This method predicts the outcome of a new observation based on the distance of k similar cases
 
-```{r}
+```{r, eval = FALSE}
 ####################### KNN ################################
 
 data_train = as.data.frame(full[1])
@@ -1306,7 +1306,7 @@ data_train_mix = subset(data_train_mix, select = -c(startday, stopday, bikeid))
 data_train_mix = data_train_mix[sample(1:nrow(data_train_mix)),]
 ```
 
-```{r}
+```{r, eval = FALSE}
 ####################### FULL TRAIN ######################################
 
 percs = get_perc(mode = "50k")
@@ -1363,7 +1363,7 @@ saveRDS(rf_model_three, "models/mix_50.rda")
 
 ```
 
-```{r}
+```{r, eval = FALSE}
 # --------------- LOAD DATASET -------------- #
 percs = get_perc(mode = "50k")
 
@@ -1528,7 +1528,7 @@ To predict the gender of a user, we used the same workflow shown in the **age gr
 
 -   Models (GLM, RF, KNN, Discriminant Analysis)
 
-```{r}
+```{r, eval = FALSE}
 ####### BACKW FEATURE SELECTION ###################
 
 percs = get_perc(mode = "50k")
@@ -1629,7 +1629,7 @@ saveRDS(rf_model, file='rf_for_gender.rda')
 
 ```
 
-```{r}
+```{r, eval = FALSE}
 ####################### KNN ################################
 
 data_train = as.data.frame(full[1])
@@ -1944,7 +1944,9 @@ pos_19 = cbind(map_start,
                end.station.name = map_end$end.station.name,
                end.station.latitude = map_end$end.station.latitude,
                end.station.longitude = map_end$end.station.longitude)
+```
 
+```{r, eval = FALSE }
 write.csv(pos_19, paste(getwd(), "SL_dataset/2019_pos.csv", sep = "/"), row.names = FALSE)
 ```
 
@@ -1975,12 +1977,15 @@ for (i in 2:4){
   out = rbind(out, tmp[order(tmp$freq, decreasing = T),][1:10,])
 }
 
+```
+
+```{r, eval = FALSE}
 write.csv(out, paste(getwd(), "SL_dataset/trips_age_19.csv", sep = "/"), row.names = FALSE)
 ```
 
 ### Map creation via Python script
 
-```{python}
+```{python, eval = FALSE}
 import pandas as pd
 import numpy as np
 import folium
@@ -2043,7 +2048,7 @@ for i in range(1,2):
   map_hooray.save("test_" + str(i) + ".html")
 ```
 
-```{python}
+```{python, eval = FALSE}
 import pandas as pd
 import numpy as np
 import folium
@@ -2118,11 +2123,14 @@ for (idx in 1:nrow(temp)){
   temp[idx, 5] = data_2020$start.station.longitude[data_2020$start.station.name == name][1]
 }
 
+```
+
+```{r, eval = FALSE}
 
 write.csv(temp, paste(getwd(), "SL_dataset/start_station_by_age_20.csv", sep = "/"), row.names = FALSE)
 ```
 
-```{python}
+```{python, eval = FALSE}
 df_acc = pd.read_csv('SL_dataset/start_station_by_age_20.csv', dtype=object)
 df_acc['start.station.name'] = df_acc['start.station.name'].astype(str)
 df_acc['age_groups'] = df_acc['age_groups'].astype(int)
@@ -2259,7 +2267,7 @@ data_o85_20[c("starttime", "stoptime")] = lapply(
 
 ## Age group prediction
 
-```{r}
+```{r, eval = FALSE}
 predict_age_20 = ensemble_predict(data_o85_20)
 save(predict_age_20, file = "predict_age_20.RData")
 ```
@@ -2739,6 +2747,10 @@ pos_20 = cbind(map_start,
                end.station.latitude = map_end$end.station.latitude,
                end.station.longitude = map_end$end.station.longitude)
 
+
+```
+
+```{r, eval = FALSE}
 write.csv(pos_20, paste(getwd(), "SL_dataset/2020_pos.csv", sep = "/"), row.names = FALSE)
 ```
 
@@ -2766,6 +2778,9 @@ for (i in 2:4){
   out = rbind(out, tmp[order(tmp$freq, decreasing = T),][1:10,])
 }
 
+```
+
+```{r, eval = FALSE}
 write.csv(out, paste(getwd(), "SL_dataset/trips_age_20.csv", sep = "/"), row.names = FALSE)
 ```
 
