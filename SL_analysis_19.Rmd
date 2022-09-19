@@ -77,6 +77,8 @@ In order to perform a solid analysis, we've arranged an initial data preprocessi
 
 -   We removed all the trips with duration \<1m
 
+-   We removed all the trips that started in a month and finished in the next one (ex. start as 31/07 23:59 and end 01/08 00:30). This specific kind of trip amount to 0.035% of the total.
+
 -   We removed a suspicious station (latitude and longitude = 0°, this location is named as "Null Island", and is located in international waters in the Atlantic Ocean, roughly 600 km off the coast of West Africa, in the Gulf of Guinea)
 
 -   For the prediction of the Gender, we consider the label 0 ("Unknown") as a missing value, i.e. will be inferred
