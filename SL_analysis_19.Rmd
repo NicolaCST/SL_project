@@ -45,7 +45,7 @@ For this project we used two datasets, both available for free on Kaggle:
 -   2020 BlueBikes tripdata: 2 million of trips, described with 17 attributes
 
 | Attribute name          | Type      | Description                                     |
-|:------------------|------------------|-----------------------------------|
+|:------------------|----------------|--------------------------------------|
 | Tripduration            | Integer   | Duration of the trip in seconds                 |
 | Starttime               | Integer   | Start time and date of trip                     |
 | Stoptime                | Integer   | Stop time and date of trip                      |
@@ -2164,17 +2164,21 @@ for i in range(1,5):
 
 Now we are able to visualize all the information obtained in the section "**Maps**". The analysis of these results, however, requires at least a minimum knowledge of the main districts of Boston in order to make some assumptions and/or predictions:
 
--   *Charlestown*, *North End*: oldest residential neighborhood, filled with old buildings dating from 100 or more years ago, sleek condos, stunning waterfront views, plus several wonderful hotels.
+-   *Charlestown*: oldest residential neighborhood, filled with old buildings dating from 100 or more years ago, sleek condos, stunning waterfront views, plus several wonderful hotels
 
--   *West End*: Boston's top museums, concert halls, sports venues, and nightlife.
+-   *West End*: Boston's top museums, concert halls, sports venues, and nightlife
 
--   *Downtown*: Financial district.
+-   *North End:* neighborhood filled with tourist attractions
+
+-   *Downtown*: Financial district
 
 -   *Cambridge*: Boston's top universities and colleges.
 
--   *Black Bay*: historic district
+-   *Black Bay*: Considered one of the best preserved example of 19th century urban design in the States
 
-![Boston districts: Charlestown - Orange, North End - Green, West End - Yellow, Cambridge - Blue, Downtown - Purple, Black Bay - dark green](images/hood.png)
+-   *Beacon Hill:* hill upon which Massachusetts state house
+
+![Boston districts: Charlestown - Orange, North End - Green, West End - Yellow, Cambridge - Blue, Downtown - Purple, Black Bay - dark green, Beacon Hill - Red](images/hood.png)
 
 ### Most used stations
 
@@ -2188,7 +2192,7 @@ Here we plot the **Top-10 most used stations** for each **age group**.
 
 -   Group 3-4: this group of people seems to frequent the south-east side. Which is reasonable since in this side there is the city center along with the majority of hospitals and clinics.
 
-![Top 10 most used stations by age group](images/trip_age_19-02.png)
+![Top 10 most used stations by age group](images/FIN2019.png)
 
 ### Most common trips
 
@@ -2789,23 +2793,23 @@ write.csv(out, paste(getwd(), "SL_dataset/trips_age_20.csv", sep = "/"), row.nam
 
 ### Most used stations
 
-![Top 10 most used stations by age group in 2020](images/top_used_2020-02.png){alt="Top 10 most used stations by age group"}
+![Top 10 most used stations by age group in 2020](images/FIN2020.png){alt="Top 10 most used stations by age group"}
 
 ### Most common trips in 2020
 
-#### Group 1
+### Group 1
 
 ![](images/trips_1_20.png){width="687"}
 
-#### Group 2
+### Group 2
 
 ![](images/trips_2_20.png)
 
-#### Group 3
+### Group 3
 
 ![](images/trips_3_20.png)
 
-#### Group 4
+### Group 4
 
 ![](images/trips_4_20.png)
 
