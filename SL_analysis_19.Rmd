@@ -746,7 +746,8 @@ legend("topright",
                   "Group 2: 31-45", 
                   "Group 3: 46-65", 
                   "Group 4: 66-85"),
-       fill = viridis(4))
+       fill = viridis(4),
+       bg='white')
 ```
 
 | Group |  Count  |  Perc   |
@@ -800,7 +801,8 @@ freq_age_month = barplot(table(data_u85$age_groups, data_u85$month),
 
 legend("topleft", legend = c("1", "2", "3", "4"),
        fill = viridis(4),
-       cex = 0.8)
+       cex = 0.8,
+       bg='white')
 
 
 freq_age_month = barplot(table(tripdata_2019_r$usertype, tripdata_2019_r$month),
@@ -810,7 +812,8 @@ freq_age_month = barplot(table(tripdata_2019_r$usertype, tripdata_2019_r$month),
 
 legend("topleft", legend = c("0: Customer", "1:Subscriber"),
        fill = viridis(2),
-       cex = 0.7)
+       cex = 0.7,
+       bg='white')
 
 ```
 
@@ -831,7 +834,8 @@ legend("topleft",
                   "Group 2: 31-45", 
                   "Group 3: 46-65", 
                   "Group 4: 66-85"),
-       fill = our_palette)
+       fill = our_palette,
+       bg='white')
 ```
 
 ### User analysis
@@ -849,7 +853,8 @@ hist = barplot(tab,
         col = viridis(3))
 
 legend("topleft", legend = c("Unknown", "Male", "Female"),
-       fill = viridis(3))
+       fill = viridis(3),
+       bg='white')
 
 text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
@@ -879,7 +884,8 @@ lines(den_subscriber, col="green")
 
 legend("topright", 
        legend = c("Customer", "Subscriber"),
-       fill = c("red", "green"))
+       fill = c("red", "green"),
+       bg='white')
 
 
 # Fill the areas
@@ -947,7 +953,8 @@ barplot(week_2019$days_age,
         col = viridis(4))
 
 legend("topright", c("1", "2", "3", "4"),
-       fill = viridis(4), cex = 0.7)
+       fill = viridis(4), cex = 0.7,
+       bg='white')
 ```
 
 In this case, our predictions have been confirmed: we had foreseen a higher amount of trips during the week due to the working / studying routine of the users, and the results seem to confirm our hypothesis.
@@ -1267,7 +1274,8 @@ barplot_prec_model_age = barplot(as.matrix(precision_age),
                           col = viridis(4))
 
 legend("topright", c("1", "2", "3", "4"),
-       fill = viridis(4), cex = 0.8)
+       fill = viridis(4), cex = 0.8,
+       bg='white')
 
 ```
 
@@ -1281,7 +1289,8 @@ barplot_rec_model_age = barplot(as.matrix(recall_age),
                           col = viridis(4))
 
 legend("topright", c("1", "2", "3", "4"),
-       fill = viridis(4), cex = 0.8)
+       fill = viridis(4), cex = 0.8,
+       bg='white')
 ```
 
 It is possible to see that the Random Forest is the most suitable model for our task. It provides both a quite good accuracy (compared with the other models), together with the highest values of precision and recall.
@@ -1493,7 +1502,8 @@ barplot_prec_ensemble = barplot(as.matrix(precision_enseble),
                           col = viridis(4))
 
 legend("topright", c("1", "2", "3", "4"),
-       fill = viridis(4), cex = 0.8)
+       fill = viridis(4), cex = 0.8,
+       bg='white')
 
 
 barplot_rec_ensemble = barplot(as.matrix(recall_ensemble), 
@@ -1504,7 +1514,8 @@ barplot_rec_ensemble = barplot(as.matrix(recall_ensemble),
                           col = viridis(4))
 
 legend("topright", c("1", "2", "3", "4"),
-       fill = viridis(4), cex = 0.8)
+       fill = viridis(4), cex = 0.8,
+       bg='white')
 
 ```
 
@@ -1808,7 +1819,8 @@ barplot_prec_model = barplot(as.matrix(precision_gen),
                           col = viridis(2))
 
 legend("topright", c("Male", "Female"),
-       fill = viridis(2), cex = 0.8)
+       fill = viridis(2), cex = 0.8,
+       bg='white')
 
 ```
 
@@ -1823,7 +1835,8 @@ barplot_rec_model = barplot(as.matrix(recall_gen),
                           col = viridis(2))
 
 legend("topright", c("Male", "Female"),
-       fill = viridis(2), cex = 0.8)
+       fill = viridis(2), cex = 0.8,
+       bg='white')
 ```
 
 In this case a simple random forest outperform all the other methods on both accuracy and precision/recall:
@@ -1906,7 +1919,8 @@ bar = barplot(as.matrix(subset(start_tab, select = -c(start_name))),
         col = viridis(nrow(start_tab)))
 
 legend("topright", legend = start_tab$start_name,
-       fill = viridis(nrow(start_tab)), cex = 0.8)
+       fill = viridis(nrow(start_tab)), cex = 0.8,
+       bg='white')
 
 ```
 
@@ -1921,7 +1935,8 @@ bar = barplot(as.matrix(subset(end_tab, select = -c(end_name))),
         col = viridis(nrow(start_tab)))
 
 legend("topright", legend = end_tab$end_name,
-       fill = viridis(nrow(end_tab)), cex = 0.8)
+       fill = viridis(nrow(end_tab)), cex = 0.8,
+       bg='white')
 ```
 
 We now save this informations in a .csv file in order to use it in the Python script
@@ -2350,7 +2365,8 @@ legend("topright",
                   "Group 2: 31-45", 
                   "Group 3: 46-65", 
                   "Group 4: 66-85"),
-       fill = viridis(4))
+       fill = viridis(4),
+       bg='white')
 
 barplot_age_group = barplot(table(data_2020$age_groups), 
      main = "Age groups 2020",
@@ -2402,20 +2418,55 @@ lines(density(data_2020$month, adjust = 4), # density plot
 ```{r}
 par(mfrow=c(1,2))
 
+mean_dur_19 = c()
+
+for (val in 1:12){
+  mean_dur_19[val] =  
+    round(mean(tripdata_2019_r$tripduration[tripdata_2019_r$month == val])/60,2)
+}
+
+min_per_month_19 = barplot(mean_dur_19, 
+     main = "Avg (min) per month 2019",
+     xlab = "Months",
+     ylab = "Mins",
+     ylim=c(0, max(mean_dur_19) + 5),
+     col = "light green",
+     names.arg = months_list)
+
+mean_dur_20 = c()
+
+for (val in 1:12){
+  mean_dur_20[val] =  
+    round(mean(tripdata_2020_r$tripduration[tripdata_2020_r$month == val])/60,2)
+}
+
+min_per_month_20 = barplot(mean_dur_20, 
+     main = "Avg (min) per month 2020",
+     xlab = "Months",
+     ylab = "Mins",
+     ylim=c(0, max(mean_dur_19) + 5),
+     col = "light green",
+     names.arg = months_list)
+```
+
+```{r}
+par(mfrow=c(1,2))
+
 freq_age_month = barplot(table(data_2019$age_groups, data_2019$month),
                          names.arg = months_list,
                          col = viridis(4),
-                         main='Frequency during months 2019')
+                         main='Age groups frequency 2019')
 
 legend("topleft", legend = c("1", "2", "3", "4"),
        fill = viridis(4),
-       cex = 0.8)
+       cex = 0.8,
+       bg='white')
 
 
 freq_age_month = barplot(table(data_2020$age_groups, data_2020$month),
                          names.arg = months_list,
                          col = viridis(4),
-                         main='Frequency during months 2020')
+                         main='Age groups frequency 2020')
 
 ```
 
@@ -2425,17 +2476,18 @@ freq_age_month = barplot(table(data_2019$usertype, data_2019$month),
                          names.arg=months_list,
                          beside = TRUE,
                          col = viridis(2),
-                         main='Frequency during months 2019')
+                         main='Usertype frequency 2019')
 
 legend("topleft", legend = c("0: Customer", "1:Subscriber"),
        fill = viridis(2),
-       cex = 0.8)
+       cex = 0.8,
+       bg='white')
 
 freq_age_month = barplot(table(data_2020$usertype, data_2020$month),
                          names.arg=months_list,
                          beside = TRUE,
                          col = viridis(2),
-                         main='Frequency during months 2020')
+                         main='Usertype frequency 2020')
 
 ```
 
@@ -2456,7 +2508,8 @@ lines(c4, col = our_palette[4], lwd = 2)
 legend("topleft", 
        legend = c("Group 1: 16-30", "Group 2: 31-45", "Group 3: 46-65", "Group 4: 66-85"),
        fill = our_palette,
-       cex = 0.8)
+       cex = 0.8,
+       bg='white')
 
 c1 = density(data_2020[data_2020$age_groups == 1,]$month, adjust = 4)
 c2 = density(data_2020[data_2020$age_groups == 2,]$month, adjust = 4)
@@ -2484,11 +2537,13 @@ par(mfrow = c(1,2))
 
 barplot(week_2019$days$Freq,
         names.arg = week_2019$days$Day,
-        col = 'lightblue')
+        col = 'lightblue',
+        main='Week trend 2019')
 
 barplot(week_2020$days$Freq,
         names.arg = week_2020$days$Day,
-        col = 'lightgreen')
+        col = 'lightgreen',
+        main='Week trend 2020')
 ```
 
 ```{r}
@@ -2497,16 +2552,19 @@ par(mfrow = c(1,2))
 barplot(week_2019$days_age,
         names.arg = week_2019$days$Day,
         beside=FALSE,
-        col = viridis(4))
+        col = viridis(4),
+        main='Week trend by age group 2019')
 
 legend("topright", c("1", "2", "3", "4"),
-       fill = viridis(4), cex = 0.7)
+       fill = viridis(4), cex = 0.7,
+       bg='white')
 
 
 barplot(week_2020$days_age,
         names.arg = week_2020$days$Day,
         beside=FALSE,
-        col = viridis(4))
+        col = viridis(4),
+        main='Week trend by age group 2020')
 ```
 
 Here we can notice an inversion of the trend: while in the 2019 the trips were mostly taken during the week, in the 2020 seems like that users start to prefer the weekend. This could be caused by the fact that the COVID outbreak has led to the drastic increase in smart working and unemployment rate.
@@ -2526,7 +2584,8 @@ hist = barplot(tab,
         col = viridis(2))
 
 legend("topleft", legend = c("Male", "Female"),
-       fill = viridis(2))
+       fill = viridis(2),
+       bg='white')
 
 text(x = hist, y = tab + 50000, labels = tab, cex = .8)
 
@@ -2539,7 +2598,8 @@ hist = barplot(tab,
         ylab = "Freq",
         ylim=c(0, max(tab) + 100000),
         names.arg = c("Customer: 0", "Subscriber: 1"),
-        col = viridis(2))
+        col = viridis(2),
+       bg='white')
 
 
 text(x = hist, y = tab + 50000, labels = tab, cex = .8)
@@ -2557,7 +2617,8 @@ hist = barplot(tab,
         ylab = "Freq",
         ylim=c(0, max(tab) + 100000),
         names.arg = c("Customer: 0", "Subscriber: 1"),
-        col = viridis(2))
+        col = viridis(2),
+        cex.names = 0.8)
 
 
 tab = table(data_2020$usertype)
@@ -2569,7 +2630,8 @@ hist = barplot(tab,
         ylab = "Freq",
         ylim=c(0, max(tab) + 100000),
         names.arg = c("Customer: 0", "Subscriber: 1"),
-        col = viridis(2))
+        col = viridis(2),
+        cex.names = 0.8)
 
 
 ```
@@ -2590,7 +2652,7 @@ barplot(t,
         ylab='Fraction',
         col=viridis(2),
         legend=TRUE,
-        args.legend = list(legend=(c('Subscriber', 'Customer'))))
+        args.legend = list(legend=(c('Subscriber', 'Customer'))),bg='white')
 
 t=table(data_2020$usertype, data_2020$month)
 s=colSums(t)
@@ -2604,7 +2666,7 @@ barplot(t,
         xlab='Month',
         ylab='Fraction',
         col=viridis(2),
-        args.legend = list(legend=(c('Subscriber', 'Customer'))))
+        args.legend = list(legend=(c('Subscriber', 'Customer'))), bg='white')
 ```
 
 In the 2020 we can see an increment on the number of Customers. We can hypothesize that the lockdown, together with all the other restrictive measures, has prompted users to cancel their subscription.
@@ -2625,7 +2687,8 @@ lines(den_subscriber, col="green")
 
 legend("topright", 
        legend = c("Customer", "Subscriber"),
-       fill = c("red", "green"))
+       fill = c("red", "green"),
+       bg='white')
 
 # Fill the areas
 polygon(den_customer, col = rgb(0.9, 0, 0, alpha = 0.6))
@@ -2646,7 +2709,8 @@ lines(den_subscriber, col="green")
 
 legend("topright", 
        legend = c("Customer", "Subscriber"),
-       fill = c("red", "green"))
+       fill = c("red", "green"),
+       bg='white')
 
 # Fill the areas
 polygon(den_customer, col = rgb(0.9, 0, 0, alpha = 0.6))
@@ -2714,7 +2778,8 @@ bar = barplot(as.matrix(subset(start_tab_20, select = -c(start_name))),
         col = viridis(nrow(start_tab)))
 
 legend("topright", legend = start_tab_20$start_name,
-       fill = viridis(nrow(start_tab_20)), cex = 0.7)
+       fill = viridis(nrow(start_tab_20)), cex = 0.7,
+       bg='white')
 
 ```
 
@@ -2729,7 +2794,8 @@ bar = barplot(as.matrix(subset(end_tab_20, select = -c(end_name))),
         col = viridis(nrow(start_tab_20)))
 
 legend("topright", legend = end_tab_20$end_name,
-       fill = viridis(nrow(end_tab_20)), cex = 0.7)
+       fill = viridis(nrow(end_tab_20)), cex = 0.7,
+       bg='white')
 ```
 
 ```{r}
