@@ -1076,7 +1076,7 @@ tab_test_knn = table(knn_model_pred, labels_test)
 ```{r}
 ####################### LOAD KNN ################################
 
-tab_test_knn_age = readRDS('cm_knn_age.RData')
+tab_test_knn_age = readRDS('Pred_ready/cm_knn_age.RData')
 plot_stats(tab_test_knn_age, mode="test", cf = T)
 
 precision_knn_age = round(precision(tab_test_knn_age),2)
@@ -1294,7 +1294,7 @@ A single algorithm may not make the perfect prediction for a given dataset. Ther
 
 Moreover, with the objective of increasing the generalization of the model, we build a **new dataset** by mixing the data from the 2019 and 2020, and used this one to train all the models that make up the ensemble.
 
-```{r}
+```{r, eval=FALSE}
 ######### JOIN 2020 ###############
 
 data_u85_20 = load_train_20()
@@ -1479,6 +1479,7 @@ cool_cf(pred_age_2019$fin, data_test$age_groups)
 ```
 
 ```{r}
+result_ensemble = table(pred_age_2019$fin, data_test$age_groups)
 precision_enseble = round(precision(result_ensemble),2)
 recall_ensemble = round(recall(result_ensemble),2)
 
@@ -2096,7 +2097,7 @@ map_hooray.save("BostonMap_top10_end_20.html")
 # ----------------------------- END ----------------------------------------- #
 ```
 
-```{r}
+```{r, eval = FALSE}
 tab = as.data.frame(table(data_2020$age_groups, data_2020$start.station.name))
 colnames(tab) = c("age_groups", "start.station.name", "freq")
 
