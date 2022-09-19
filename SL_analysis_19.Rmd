@@ -77,8 +77,6 @@ In order to perform a solid analysis, we've arranged an initial data preprocessi
 
 -   We removed all the trips with duration \<1m
 
--   We removed all the trips that started in a month and finished in the next one (ex. start as 31/07 23:59 and end 01/08 00:30). This specific kind of trip amount to 0.035% of the total.
-
 -   We removed a suspicious station (latitude and longitude = 0°, this location is named as "Null Island", and is located in international waters in the Atlantic Ocean, roughly 600 km off the coast of West Africa, in the Gulf of Guinea)
 
 -   For the prediction of the Gender, we consider the label 0 ("Unknown") as a missing value, i.e. will be inferred
@@ -745,7 +743,7 @@ legend("topright",
        legend = c("Group 1: 16-30", 
                   "Group 2: 31-45", 
                   "Group 3: 46-65", 
-                  "Group 4: 65-85"),
+                  "Group 4: 66-85"),
        fill = viridis(4))
 ```
 
@@ -830,7 +828,7 @@ legend("topleft",
        legend = c("Group 1: 16-30",
                   "Group 2: 31-45", 
                   "Group 3: 46-65", 
-                  "Group 4: 65-85"),
+                  "Group 4: 66-85"),
        fill = our_palette)
 ```
 
@@ -2336,7 +2334,7 @@ legend("topright",
        legend = c("Group 1: 16-30", 
                   "Group 2: 31-45", 
                   "Group 3: 46-65", 
-                  "Group 4: 65-85"),
+                  "Group 4: 66-85"),
        fill = viridis(4))
 
 barplot_age_group = barplot(table(data_2020$age_groups), 
@@ -2441,7 +2439,7 @@ lines(c4, col = our_palette[4], lwd = 2)
 
 
 legend("topleft", 
-       legend = c("Group 1: 16-30", "Group 2: 31-45", "Group 3: 46-65", "Group 4: 65-85"),
+       legend = c("Group 1: 16-30", "Group 2: 31-45", "Group 3: 46-65", "Group 4: 66-85"),
        fill = our_palette,
        cex = 0.8)
 
